@@ -9,7 +9,7 @@
 		"bump": "bunx npm-check-updates -p bun -ui",
 		"check": "tsc --noEmit",
 		"ci": "biome check --write && tsc --noEmit && vitest run --coverage --config vitest.config.ts",
-		"coverage": "vitest --coverage --config vitest.config.ts",
+		"coverage": "vitest run --coverage --config vitest.config.ts",
 		"dev": "bun run src/cli/cli.ts",
 		"lint": "biome check --write src",
 		"test": "vitest --config vitest.config.ts"
