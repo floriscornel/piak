@@ -1,5 +1,7 @@
 # piak
 
+[![CI](https://github.com/floriscornel/piak/actions/workflows/ci.yml/badge.svg)](https://github.com/floriscornel/piak/actions/workflows/ci.yml)
+
 To install dependencies:
 
 ```bash
