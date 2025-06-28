@@ -6,7 +6,13 @@ import type { OpenAPIV3 } from "@scalar/openapi-types";
 export async function parse(specification: string): Promise<FlattenInput> {
 	const result: FlattenInput = {};
 
-	const { schema, errors } = await dereference(specification);
+	const schemaToRef: Record<string, string> = {};
+
+	const { schema, errors } = await dereference(specification, {
+		onDereference: ({ schema, ref }) => {
+			schemaToRef[JSON.stringify(schema)] = ref;
+		},
+	});
 	if (errors && errors.length > 0) {
 		throw new Error(errors.map((e) => e.message).join("\n"));
 	}
@@ -38,6 +44,24 @@ export async function parse(specification: string): Promise<FlattenInput> {
 		}
 	}
 
+	const parseSchema = (name: string, schemaObj: OpenAPIV3.SchemaObject) => {
+		const stringifiedSchema = JSON.stringify(schemaObj);
+		const refName = schemaToRef[stringifiedSchema];
+		if (refName && result[refName]) {
+			result[name] = {
+				type: "reference",
+			};
+		} else {
+			result[name] = {
+				type: "object",
+				propertyID: propertyID++,
+				properties: processSchema(schemaObj, propertyID),
+			};
+		}
+	};
+
+	console.debug("Parsed components", Object.keys(result));
+
 	// Process all paths
 	if (schema.paths) {
 		for (const [path, pathItem] of Object.entries(schema.paths)) {
@@ -49,6 +73,13 @@ export async function parse(specification: string): Promise<FlattenInput> {
 				// Process responses first
 				if (op.responses) {
 					for (const [statusCode, response] of Object.entries(op.responses)) {
+						console.debug(
+							"OP",
+							op.operationId,
+							"Response",
+							statusCode,
+							JSON.stringify(response),
+						);
 						const resp = response as OpenAPIV3.ResponseObject;
 						const content = resp.content?.["application/json"];
 						if (content?.schema) {
@@ -59,12 +90,47 @@ export async function parse(specification: string): Promise<FlattenInput> {
 								operationID: op.operationId,
 							});
 							if (name) {
+								console.debug(
+									"Response name",
+									name,
+									"content",
+									JSON.stringify(content),
+								);
 								const schemaObj = content.schema as OpenAPIV3.SchemaObject;
-								result[name] = {
-									type: "object",
-									propertyID: propertyID++,
-									properties: processSchema(schemaObj, propertyID),
-								};
+								if (schemaObj.$ref) {
+									// Handle $ref by using the referenced schema name
+									const refName = schemaObj.$ref.split("/").pop();
+									if (refName) {
+										result[name] = {
+											type: "object",
+											propertyID: propertyID++,
+											properties: processSchema(
+												schema.components?.schemas?.[
+													refName
+												] as OpenAPIV3.SchemaObject,
+												propertyID,
+											),
+										};
+										console.debug(
+											"Response name",
+											name,
+											"result",
+											JSON.stringify(result[name]),
+										);
+									}
+								} else {
+									result[name] = {
+										type: "object",
+										propertyID: propertyID++,
+										properties: processSchema(schemaObj, propertyID),
+									};
+									console.debug(
+										"Response name",
+										name,
+										"result",
+										JSON.stringify(result[name]),
+									);
+								}
 							}
 						}
 					}
@@ -82,6 +148,7 @@ export async function parse(specification: string): Promise<FlattenInput> {
 							operationID: op.operationId,
 						});
 						if (name) {
+							console.debug("Request name", name, JSON.stringify(content));
 							const schemaObj = content.schema as OpenAPIV3.SchemaObject;
 							if (schemaObj.$ref) {
 								// Handle $ref by using the referenced schema name
@@ -97,6 +164,11 @@ export async function parse(specification: string): Promise<FlattenInput> {
 											propertyID,
 										),
 									};
+									console.debug(
+										"Request name",
+										name,
+										JSON.stringify(result[name]),
+									);
 								}
 							} else {
 								result[name] = {
@@ -104,6 +176,11 @@ export async function parse(specification: string): Promise<FlattenInput> {
 									propertyID: propertyID++,
 									properties: processSchema(schemaObj, propertyID),
 								};
+								console.debug(
+									"Request name",
+									name,
+									JSON.stringify(result[name]),
+								);
 							}
 						}
 					}
