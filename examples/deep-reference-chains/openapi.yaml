@@ -1,0 +1,450 @@
+openapi: 3.0.4
+info:
+  title: Deep Reference Chains Example
+  version: 1.0.0
+  description: Example showcasing deep reference chains and complex schema dependencies
+paths:
+  /organizations/{orgId}/departments/{deptId}/teams/{teamId}/members:
+    get:
+      summary: Get team members
+      operationId: getTeamMembers
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deptId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of team members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMembersList'
+components:
+  schemas:
+    # Level 1: Core entities
+    Organization:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        settings:
+          $ref: '#/components/schemas/OrganizationSettings'
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
+    
+    # Level 2: Department references Organization
+    Department:
+      type: object
+      required:
+        - id
+        - name
+        - organizationId
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        organizationId:
+          type: string
+        manager:
+          $ref: '#/components/schemas/Employee'
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+        policies:
+          $ref: '#/components/schemas/DepartmentPolicies'
+    
+    # Level 3: Team references Department
+    Team:
+      type: object
+      required:
+        - id
+        - name
+        - departmentId
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        departmentId:
+          type: string
+        lead:
+          $ref: '#/components/schemas/Employee'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+        project:
+          $ref: '#/components/schemas/Project'
+    
+    # Level 4: TeamMember references Team and Employee
+    TeamMember:
+      type: object
+      required:
+        - id
+        - employeeId
+        - teamId
+        - role
+      properties:
+        id:
+          type: string
+        employeeId:
+          type: string
+        teamId:
+          type: string
+        role:
+          $ref: '#/components/schemas/TeamRole'
+        employee:
+          $ref: '#/components/schemas/Employee'
+        permissions:
+          $ref: '#/components/schemas/TeamPermissions'
+        workload:
+          $ref: '#/components/schemas/WorkloadAssignment'
+    
+    # Level 5: Employee has deep nested references
+    Employee:
+      type: object
+      required:
+        - id
+        - email
+        - profile
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        profile:
+          $ref: '#/components/schemas/EmployeeProfile'
+        contract:
+          $ref: '#/components/schemas/EmployeeContract'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+        certifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certification'
+    
+    # Level 6: EmployeeProfile references multiple deep objects
+    EmployeeProfile:
+      type: object
+      required:
+        - firstName
+        - lastName
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        personalInfo:
+          $ref: '#/components/schemas/PersonalInfo'
+        workInfo:
+          $ref: '#/components/schemas/WorkInfo'
+        preferences:
+          $ref: '#/components/schemas/EmployeePreferences'
+        emergency:
+          $ref: '#/components/schemas/EmergencyContact'
+    
+    # Level 7: Deep nested configurations
+    EmployeePreferences:
+      type: object
+      properties:
+        communication:
+          $ref: '#/components/schemas/CommunicationPreferences'
+        workspace:
+          $ref: '#/components/schemas/WorkspacePreferences'
+        benefits:
+          $ref: '#/components/schemas/BenefitsSelection'
+        schedule:
+          $ref: '#/components/schemas/SchedulePreferences'
+    
+    # Supporting schemas for the deep chain
+    OrganizationSettings:
+      type: object
+      properties:
+        timezone:
+          type: string
+        locale:
+          type: string
+        policies:
+          $ref: '#/components/schemas/GlobalPolicies'
+    
+    DepartmentPolicies:
+      type: object
+      properties:
+        timeTracking:
+          $ref: '#/components/schemas/TimeTrackingPolicy'
+        access:
+          $ref: '#/components/schemas/AccessPolicy'
+    
+    TeamRole:
+      type: object
+      required:
+        - name
+        - level
+      properties:
+        name:
+          type: string
+        level:
+          type: integer
+        responsibilities:
+          type: array
+          items:
+            type: string
+        permissions:
+          $ref: '#/components/schemas/RolePermissions'
+    
+    TeamPermissions:
+      type: object
+      properties:
+        canEdit:
+          type: boolean
+        canDelete:
+          type: boolean
+        canManage:
+          type: boolean
+        customPermissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomPermission'
+    
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMilestone'
+    
+    WorkloadAssignment:
+      type: object
+      properties:
+        hoursPerWeek:
+          type: number
+        allocation:
+          type: number
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    
+    # Terminal schemas (leaf nodes)
+    PersonalInfo:
+      type: object
+      properties:
+        birthDate:
+          type: string
+          format: date
+        phone:
+          type: string
+        address:
+          type: string
+    
+    WorkInfo:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date
+        position:
+          type: string
+        level:
+          type: string
+    
+    EmergencyContact:
+      type: object
+      properties:
+        name:
+          type: string
+        relationship:
+          type: string
+        phone:
+          type: string
+    
+    CommunicationPreferences:
+      type: object
+      properties:
+        email:
+          type: boolean
+        slack:
+          type: boolean
+        sms:
+          type: boolean
+    
+    WorkspacePreferences:
+      type: object
+      properties:
+        remoteWork:
+          type: boolean
+        deskType:
+          type: string
+        equipment:
+          type: array
+          items:
+            type: string
+    
+    BenefitsSelection:
+      type: object
+      properties:
+        healthPlan:
+          type: string
+        retirement:
+          type: string
+        vacation:
+          type: integer
+    
+    SchedulePreferences:
+      type: object
+      properties:
+        startTime:
+          type: string
+        endTime:
+          type: string
+        flexibleHours:
+          type: boolean
+    
+    # Simple objects
+    Skill:
+      type: object
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+          enum: [beginner, intermediate, advanced, expert]
+    
+    Certification:
+      type: object
+      properties:
+        name:
+          type: string
+        issuer:
+          type: string
+        validUntil:
+          type: string
+          format: date
+    
+    EmployeeContract:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [fulltime, parttime, contract, intern]
+        salary:
+          type: number
+        benefits:
+          type: array
+          items:
+            type: string
+    
+    GlobalPolicies:
+      type: object
+      properties:
+        security:
+          type: string
+        dataRetention:
+          type: string
+    
+    TimeTrackingPolicy:
+      type: object
+      properties:
+        required:
+          type: boolean
+        minimumHours:
+          type: number
+    
+    AccessPolicy:
+      type: object
+      properties:
+        vpnRequired:
+          type: boolean
+        mfaRequired:
+          type: boolean
+    
+    RolePermissions:
+      type: object
+      properties:
+        read:
+          type: boolean
+        write:
+          type: boolean
+        admin:
+          type: boolean
+    
+    CustomPermission:
+      type: object
+      properties:
+        name:
+          type: string
+        granted:
+          type: boolean
+    
+    ProjectMilestone:
+      type: object
+      properties:
+        name:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        completed:
+          type: boolean
+    
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        estimatedHours:
+          type: number
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+    
+    # Response wrapper
+    TeamMembersList:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            size:
+              type: integer
+            total:
+              type: integer 

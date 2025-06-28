@@ -1,0 +1,286 @@
+openapi: 3.0.4
+info:
+  title: Mixed Content Types Example
+  version: 1.0.0
+  description: Example showcasing properties that can contain different content types
+paths:
+  /content:
+    post:
+      summary: Create content
+      operationId: createContent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '200':
+          description: Content created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentResponse'
+components:
+  schemas:
+    ContentRequest:
+      type: object
+      required:
+        - title
+        - body
+      properties:
+        title:
+          type: string
+        body:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/RichContent'
+        metadata:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/MetadataObject'
+        attachments:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - $ref: '#/components/schemas/AttachmentDetail'
+        tags:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: array
+              items:
+                $ref: '#/components/schemas/TagObject'
+    
+    RichContent:
+      type: object
+      required:
+        - type
+        - data
+      properties:
+        type:
+          type: string
+          enum: [html, markdown, json, xml]
+        data:
+          type: string
+        encoding:
+          type: string
+          enum: [utf8, base64]
+        size:
+          type: integer
+        checksum:
+          type: string
+    
+    MetadataObject:
+      type: object
+      properties:
+        source:
+          type: string
+        created:
+          type: string
+          format: date-time
+        author:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/AuthorDetail'
+        keywords:
+          type: array
+          items:
+            type: string
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+    
+    AuthorDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+    
+    AttachmentDetail:
+      type: object
+      required:
+        - url
+        - filename
+      properties:
+        url:
+          type: string
+          format: uri
+        filename:
+          type: string
+        size:
+          type: integer
+        mimeType:
+          type: string
+        description:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/LocalizedDescription'
+    
+    LocalizedDescription:
+      type: object
+      properties:
+        en:
+          type: string
+        es:
+          type: string
+        fr:
+          type: string
+        default:
+          type: string
+    
+    TagObject:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        color:
+          type: string
+        weight:
+          type: number
+          minimum: 0
+          maximum: 1
+    
+    ContentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [created, pending, published, failed]
+        message:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/StatusDetail'
+        processedContent:
+          type: object
+          properties:
+            originalFormat:
+              type: string
+            finalFormat:
+              type: string
+            transformations:
+              type: array
+              items:
+                oneOf:
+                  - type: string
+                  - $ref: '#/components/schemas/TransformationDetail'
+    
+    StatusDetail:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        details:
+          oneOf:
+            - type: string
+            - type: object
+              properties:
+                errors:
+                  type: array
+                  items:
+                    type: string
+                warnings:
+                  type: array
+                  items:
+                    type: string
+        timestamp:
+          type: string
+          format: date-time
+    
+    TransformationDetail:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        config:
+          oneOf:
+            - type: string
+            - type: object
+        executionTime:
+          type: number
+    
+    ApiResponse:
+      oneOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - $ref: '#/components/schemas/ErrorResponse'
+    
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          oneOf:
+            - type: string
+            - type: object
+            - type: array
+              items: {}
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            version:
+              type: string
+    
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/ErrorDetail'
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            requestId:
+              type: string
+    
+    ErrorDetail:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        field:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: object 

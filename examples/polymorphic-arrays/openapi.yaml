@@ -1,0 +1,155 @@
+openapi: 3.0.4
+info:
+  title: Polymorphic Arrays Example
+  version: 1.0.0
+  description: Example showcasing arrays containing different object types
+paths:
+  /timeline:
+    get:
+      summary: Get activity timeline
+      operationId: getTimeline
+      responses:
+        '200':
+          description: Mixed activity events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Timeline'
+components:
+  schemas:
+    Timeline:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/MessageEvent'
+              - $ref: '#/components/schemas/FileEvent'
+              - $ref: '#/components/schemas/SystemEvent'
+          # Array containing different event types
+        notifications:
+          type: array
+          items:
+            anyOf:
+              - $ref: '#/components/schemas/EmailNotification'
+              - $ref: '#/components/schemas/PushNotification'
+              - $ref: '#/components/schemas/SMSNotification'
+          # Array containing different notification types
+          
+    MessageEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - message
+      properties:
+        type:
+          type: string
+          enum: [message]
+        timestamp:
+          type: string
+          format: date-time
+        message:
+          type: string
+        author:
+          type: string
+        mentions:
+          type: array
+          items:
+            type: string
+            
+    FileEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - filename
+      properties:
+        type:
+          type: string
+          enum: [file]
+        timestamp:
+          type: string
+          format: date-time
+        filename:
+          type: string
+        fileSize:
+          type: integer
+        uploadedBy:
+          type: string
+        downloadUrl:
+          type: string
+          format: uri
+          
+    SystemEvent:
+      type: object
+      required:
+        - type
+        - timestamp
+        - action
+      properties:
+        type:
+          type: string
+          enum: [system]
+        timestamp:
+          type: string
+          format: date-time
+        action:
+          type: string
+        component:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error, critical]
+          
+    EmailNotification:
+      type: object
+      required:
+        - type
+        - recipient
+      properties:
+        type:
+          type: string
+          enum: [email]
+        recipient:
+          type: string
+          format: email
+        subject:
+          type: string
+        template:
+          type: string
+        
+    PushNotification:
+      type: object
+      required:
+        - type
+        - deviceToken
+      properties:
+        type:
+          type: string
+          enum: [push]
+        deviceToken:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        badge:
+          type: integer
+          
+    SMSNotification:
+      type: object
+      required:
+        - type
+        - phoneNumber
+      properties:
+        type:
+          type: string
+          enum: [sms]
+        phoneNumber:
+          type: string
+        message:
+          type: string
+        carrier:
+          type: string 

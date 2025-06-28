@@ -1,0 +1,133 @@
+openapi: 3.0.4
+info:
+  title: Conditional Schemas Example
+  version: 1.0.0
+  description: Example showcasing conditional schema validation handled in PHP
+paths:
+  /payments:
+    post:
+      summary: Process payment
+      operationId: processPayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+components:
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - type
+        - amount
+      properties:
+        type:
+          type: string
+          enum: [card, bank, crypto, paypal]
+          description: Payment type determines which additional fields are required
+        amount:
+          type: number
+          minimum: 0.01
+        currency:
+          type: string
+          default: USD
+        # Card payment fields
+        cardNumber:
+          type: string
+          description: Required for card payments
+        expiryDate:
+          type: string
+          description: Required for card payments (MM/YY format)
+        cvv:
+          type: string
+          description: Required for card payments
+        cardholderName:
+          type: string
+          description: Optional for card payments
+        # Bank payment fields
+        iban:
+          type: string
+          description: Required for bank payments
+        accountHolder:
+          type: string
+          description: Required for bank payments
+        bankCode:
+          type: string
+          description: Optional for bank payments
+        # Crypto payment fields
+        walletAddress:
+          type: string
+          description: Required for crypto payments
+        cryptoCurrency:
+          type: string
+          enum: [BTC, ETH, USDC, USDT]
+          description: Required for crypto payments
+        network:
+          type: string
+          enum: [mainnet, testnet]
+          description: Optional for crypto payments
+        # PayPal payment fields
+        paypalEmail:
+          type: string
+          format: email
+          description: Required for PayPal payments
+        paypalAccountId:
+          type: string
+          description: Optional for PayPal payments
+                
+    PaymentResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        processingFee:
+          type: number
+        # Fields present based on status
+        confirmationCode:
+          type: string
+          description: Present when status is completed
+        processedAt:
+          type: string
+          format: date-time
+          description: Present when status is completed
+        errorCode:
+          type: string
+          description: Present when status is failed
+        errorMessage:
+          type: string
+          description: Present when status is failed
+        retryAfter:
+          type: integer
+          description: Present when status is failed (seconds to wait)
+              
+    ShippingAddress:
+      type: object
+      required:
+        - country
+        - addressLine1
+      properties:
+        country:
+          type: string
+          description: Country code determines additional required fields
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+          description: Required for US and UK, format varies by country
+        state:
+          type: string
+          description: Required for US addresses 

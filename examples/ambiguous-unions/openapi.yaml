@@ -1,0 +1,129 @@
+openapi: 3.0.4
+info:
+  title: Ambiguous Union Types Example
+  version: 1.0.0
+  description: Example showcasing union types without discriminators
+paths:
+  /search:
+    get:
+      summary: Search across different entity types
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mixed search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+components:
+  schemas:
+    # Overlapping schemas without clear discriminator
+    Product:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        category:
+          type: string
+        # No unique identifier field
+        
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string  # Same as Product.name!
+        email:
+          type: string
+        bio:
+          type: string
+        # No unique identifier field
+        
+    Order:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string  # Same as Product.name and User.name!
+        total:
+          type: number
+        status:
+          type: string
+        items:
+          type: array
+          items:
+            type: string
+        # No unique identifier field
+        
+    # Union without discriminator - ambiguous!
+    SearchResult:
+      anyOf:
+        - $ref: '#/components/schemas/Product'
+        - $ref: '#/components/schemas/User'
+        - $ref: '#/components/schemas/Order'
+      # No discriminator property - how to determine type at runtime?
+      
+    # Another example: flexible configuration
+    DatabaseConfig:
+      anyOf:
+        - type: string  # Connection string
+        - type: object  # Connection object
+          required:
+            - host
+            - database
+          properties:
+            host:
+              type: string
+            port:
+              type: integer
+            database:
+              type: string
+            username:
+              type: string
+            password:
+              type: string
+              
+    # Mixed content notification
+    NotificationContent:
+      anyOf:
+        - type: string  # Plain text
+        - type: object  # Rich content
+          properties:
+            title:
+              type: string
+            body:
+              type: string
+            actions:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  url:
+                    type: string 

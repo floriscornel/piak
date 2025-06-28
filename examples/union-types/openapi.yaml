@@ -1,0 +1,96 @@
+openapi: 3.0.4
+info:
+  title: Union Types Example
+  version: 1.0.0
+  description: Example showcasing oneOf and anyOf union type patterns
+paths:
+  /notifications:
+    post:
+      summary: Send notification
+      operationId: sendNotification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '200':
+          description: Notification sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+components:
+  schemas:
+    NotificationRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          oneOf:
+            - $ref: '#/components/schemas/TextMessage'
+            - $ref: '#/components/schemas/RichMessage'
+        priority:
+          type: string
+          enum: [low, normal, high]
+    
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        delivery:
+          anyOf:
+            - $ref: '#/components/schemas/EmailDelivery'
+            - $ref: '#/components/schemas/SmsDelivery'
+            - $ref: '#/components/schemas/PushDelivery'
+    
+    TextMessage:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+        encoding:
+          type: string
+          default: utf8
+    
+    RichMessage:
+      type: object
+      required:
+        - html
+      properties:
+        html:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: string
+    
+    EmailDelivery:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        messageId:
+          type: string
+    
+    SmsDelivery:
+      type: object
+      properties:
+        phoneNumber:
+          type: string
+        carrier:
+          type: string
+    
+    PushDelivery:
+      type: object
+      properties:
+        deviceToken:
+          type: string
+        platform:
+          type: string
+          enum: [ios, android] 

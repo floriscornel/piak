@@ -1,0 +1,101 @@
+openapi: 3.0.4
+info:
+  title: Nullable vs Optional Example
+  version: 1.0.0
+  description: Example showcasing the difference between nullable and optional properties
+paths:
+  /profiles:
+    post:
+      summary: Create user profile
+      operationId: createProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+components:
+  schemas:
+    ProfileRequest:
+      type: object
+      required:
+        - username
+        - email
+        - bio
+      properties:
+        username:
+          type: string
+          minLength: 3
+        email:
+          type: string
+          format: email
+        bio:
+          type: string
+          nullable: true  # Required but can be null
+        avatar:
+          type: string
+          format: uri
+          # Optional property (not in required array)
+        settings:
+          $ref: '#/components/schemas/UserSettings'
+          # Optional property that references another object
+    
+    ProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        bio:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          format: uri
+          nullable: true  # Can be explicitly null
+        settings:
+          allOf:
+            - $ref: '#/components/schemas/UserSettings'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true  # Can be null if never updated
+    
+    UserSettings:
+      type: object
+      required:
+        - theme
+        - notifications
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        notifications:
+          type: boolean
+        privacy:
+          type: string
+          enum: [public, private, friends]
+          # Optional - not required
+        customCss:
+          type: string
+          nullable: true  # Optional and nullable
+        preferences:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true 

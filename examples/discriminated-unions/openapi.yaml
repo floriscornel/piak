@@ -1,0 +1,112 @@
+openapi: 3.0.4
+info:
+  title: Discriminated Unions Example
+  version: 1.0.0
+  description: Example showcasing discriminated unions with discriminator property
+paths:
+  /events:
+    post:
+      summary: Create event
+      operationId: createEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+components:
+  schemas:
+    Event:
+      oneOf:
+        - $ref: '#/components/schemas/UserEvent'
+        - $ref: '#/components/schemas/SystemEvent'
+        - $ref: '#/components/schemas/PaymentEvent'
+      discriminator:
+        propertyName: type
+        mapping:
+          user: '#/components/schemas/UserEvent'
+          system: '#/components/schemas/SystemEvent'
+          payment: '#/components/schemas/PaymentEvent'
+    
+    EventResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processed, failed]
+        event:
+          $ref: '#/components/schemas/Event'
+    
+    UserEvent:
+      type: object
+      required:
+        - type
+        - userId
+        - action
+      properties:
+        type:
+          type: string
+          enum: [user]
+        userId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum: [login, logout, signup]
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    
+    SystemEvent:
+      type: object
+      required:
+        - type
+        - component
+        - level
+      properties:
+        type:
+          type: string
+          enum: [system]
+        component:
+          type: string
+        level:
+          type: string
+          enum: [info, warning, error, critical]
+        message:
+          type: string
+        stackTrace:
+          type: array
+          items:
+            type: string
+    
+    PaymentEvent:
+      type: object
+      required:
+        - type
+        - transactionId
+        - amount
+      properties:
+        type:
+          type: string
+          enum: [payment]
+        transactionId:
+          type: string
+        amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded] 

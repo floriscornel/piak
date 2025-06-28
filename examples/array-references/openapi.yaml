@@ -1,0 +1,189 @@
+openapi: 3.0.4
+info:
+  title: Array References Example
+  version: 1.0.0
+  description: Example showcasing arrays of object references and complex nesting
+paths:
+  /organizations:
+    get:
+      summary: Get organization with teams and members
+      operationId: getOrganization
+      responses:
+        '200':
+          description: Organization data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+components:
+  schemas:
+    Organization:
+      type: object
+      required:
+        - id
+        - name
+        - teams
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        settings:
+          $ref: '#/components/schemas/OrganizationSettings'
+    
+    Team:
+      type: object
+      required:
+        - id
+        - name
+        - members
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+        permissions:
+          type: array
+          items:
+            type: string
+            enum: [read, write, admin, delete]
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    
+    Member:
+      type: object
+      required:
+        - id
+        - username
+        - role
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, admin, member, guest]
+        profile:
+          $ref: '#/components/schemas/Profile'
+        teams:
+          type: array
+          items:
+            type: string
+            format: uuid  # Team IDs to avoid circular references
+    
+    TeamMember:
+      type: object
+      required:
+        - memberId
+        - role
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [lead, developer, reviewer, observer]
+        joinedAt:
+          type: string
+          format: date-time
+    
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [planning, active, on-hold, completed, cancelled]
+        tags:
+          type: array
+          items:
+            type: string
+        assignees:
+          type: array
+          items:
+            type: string
+            format: uuid  # Member IDs
+    
+    Profile:
+      type: object
+      properties:
+        displayName:
+          type: string
+        bio:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+          format: uri
+        socialLinks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+    
+    SocialLink:
+      type: object
+      required:
+        - platform
+        - url
+      properties:
+        platform:
+          type: string
+          enum: [github, twitter, linkedin, website]
+        url:
+          type: string
+          format: uri
+        verified:
+          type: boolean
+          default: false
+    
+    OrganizationSettings:
+      type: object
+      properties:
+        visibility:
+          type: string
+          enum: [public, private, internal]
+        allowedEmailDomains:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+            enum: [projects, teams, wiki, issues, discussions] 

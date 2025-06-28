@@ -1,0 +1,119 @@
+openapi: 3.0.4
+info:
+  title: Multiple Inheritance Example
+  version: 1.0.0
+  description: Example showcasing multiple inheritance using allOf
+paths:
+  /admin-users:
+    get:
+      summary: Get admin users
+      operationId: getAdminUsers
+      responses:
+        '200':
+          description: List of admin users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminUser'
+components:
+  schemas:
+    # Base schemas
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+          
+    Admin:
+      type: object
+      required:
+        - permissions
+        - department
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+        department:
+          type: string
+        accessLevel:
+          type: integer
+          minimum: 1
+          maximum: 10
+          
+    Auditable:
+      type: object
+      properties:
+        lastModifiedBy:
+          type: string
+        lastModifiedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          
+    Trackable:
+      type: object
+      properties:
+        ipAddress:
+          type: string
+          format: ipv4
+        userAgent:
+          type: string
+        sessionId:
+          type: string
+          
+    # Multiple inheritance via allOf
+    AdminUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - $ref: '#/components/schemas/Admin'
+        - $ref: '#/components/schemas/Auditable'
+        - type: object
+          properties:
+            adminSince:
+              type: string
+              format: date
+              
+    SuperAdmin:
+      allOf:
+        - $ref: '#/components/schemas/AdminUser'
+        - $ref: '#/components/schemas/Trackable'
+        - type: object
+          required:
+            - securityClearance
+          properties:
+            securityClearance:
+              type: string
+              enum: [top-secret, secret, confidential]
+            emergencyContact:
+              type: string
+              
+    # Property conflicts example
+    EmployeeUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            id:  # Conflicts with User.id
+              type: string
+              description: Employee ID (different from User ID)
+            employeeNumber:
+              type: string
+            department:
+              type: string 

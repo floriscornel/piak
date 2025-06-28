@@ -1,0 +1,77 @@
+openapi: 3.0.4
+info:
+  title: Circular References Example
+  version: 1.0.0
+  description: Example showcasing circular references between objects
+paths:
+  /users/{id}:
+    get:
+      summary: Get user with profile
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User with profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - username
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        profile:
+          $ref: '#/components/schemas/Profile'
+        # Profile contains reference back to User
+        
+    Profile:
+      type: object
+      required:
+        - id
+        - userId
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        bio:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        # User contains reference back to Profile - CIRCULAR!
+        settings:
+          $ref: '#/components/schemas/ProfileSettings'
+          
+    ProfileSettings:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark]
+        privacy:
+          type: string
+          enum: [public, private]
+        profile:
+          $ref: '#/components/schemas/Profile'
+        # Another circular reference back to Profile 

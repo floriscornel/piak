@@ -8,10 +8,11 @@ To install dependencies:
 bun install
 ```
 
-To run:
+To run for petstore example:
 
 ```bash
-bun run src/index.ts
+bun run src/cli/cli.ts generate -i examples/petstore/openapi.yaml -o examples/petstore/output
+diff examples/petstore/output examples/petstore/expected
 ```
 
 This project was created using `bun init` in bun v1.2.0. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

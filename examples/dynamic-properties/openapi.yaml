@@ -1,0 +1,56 @@
+openapi: 3.0.4
+info:
+  title: Dynamic Properties Example
+  version: 1.0.0
+  description: Example showcasing additionalProperties and dynamic object properties
+paths:
+  /user-preferences:
+    get:
+      summary: Get user preferences
+      operationId: getUserPreferences
+      responses:
+        '200':
+          description: User preferences with dynamic settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+components:
+  schemas:
+    UserPreferences:
+      type: object
+      required:
+        - userId
+        - theme
+      properties:
+        userId:
+          type: string
+          format: uuid
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        settings:
+          $ref: '#/components/schemas/DynamicSettings'
+      additionalProperties: false
+    
+    DynamicSettings:
+      type: object
+      description: Settings object that can contain arbitrary key-value pairs
+      properties:
+        # Some known properties
+        notifications:
+          type: boolean
+        language:
+          type: string
+      # Allow additional dynamic properties
+      additionalProperties:
+        type: string
+    
+    Metadata:
+      type: object
+      description: Pure dynamic object with no predefined properties
+      additionalProperties:
+        oneOf:
+          - type: string
+          - type: number
+          - type: boolean 

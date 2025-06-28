@@ -1,0 +1,109 @@
+openapi: 3.0.4
+info:
+  title: Recursive Schemas Example
+  version: 1.0.0
+  description: Example showcasing recursive/self-referencing schemas
+paths:
+  /categories:
+    get:
+      summary: Get category tree
+      operationId: getCategories
+      responses:
+        '200':
+          description: Category tree structure
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+  /comments/{postId}:
+    get:
+      summary: Get comment thread
+      operationId: getComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Nested comment thread
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+components:
+  schemas:
+    Category:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        parent:
+          $ref: '#/components/schemas/Category'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        depth:
+          type: integer
+          minimum: 0
+          
+    Comment:
+      type: object
+      required:
+        - id
+        - content
+        - author
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        author:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        parent:
+          $ref: '#/components/schemas/Comment'
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        level:
+          type: integer
+          minimum: 0
+          description: Nesting level (0 = top-level)
+          
+    MenuNode:
+      type: object
+      required:
+        - id
+        - label
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        href:
+          type: string
+        icon:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuNode' 
