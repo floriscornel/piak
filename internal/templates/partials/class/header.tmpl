@@ -1,0 +1,13 @@
+{{- define "classHeader" -}}
+<?php
+
+declare(strict_types=1);
+{{- if .Config.Namespace }}
+
+namespace {{ .Config.Namespace }};
+{{- end }}
+
+{{- template "classDocblock" . }}
+readonly class {{ .Name }}
+{
+{{- end -}} 

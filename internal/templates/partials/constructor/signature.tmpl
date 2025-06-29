@@ -1,0 +1,31 @@
+{{- define "constructorSignature" -}}
+
+    public function __construct(
+{{- /* Count required and optional properties for comma logic */ -}}
+{{- $requiredCount := 0 }}
+{{- $optionalCount := 0 }}
+{{- range $prop := .Properties }}
+{{- if $prop.Required }}
+{{- $requiredCount = add $requiredCount 1 }}
+{{- else }}
+{{- $optionalCount = add $optionalCount 1 }}
+{{- end }}
+{{- end }}
+{{- /* Output required parameters first */ -}}
+{{- $requiredIndex := 0 }}
+{{- range $prop := .Properties }}
+{{- if $prop.Required }}
+        public {{ formatPHPType $prop.PHPType }} ${{ $prop.Name }}{{ if or (ne $requiredIndex (sub $requiredCount 1)) (gt $optionalCount 0) }},{{ end }}
+{{- $requiredIndex = add $requiredIndex 1 }}
+{{- end }}
+{{- end }}
+{{- /* Output optional parameters */ -}}
+{{- $optionalIndex := 0 }}
+{{- range $prop := .Properties }}
+{{- if not $prop.Required }}
+        public {{ formatPHPType $prop.PHPType }} ${{ $prop.Name }}{{ if $prop.PHPType.IsArray }} = []{{ else }} = null{{ end }}{{ if ne $optionalIndex (sub $optionalCount 1) }},{{ end }}
+{{- $optionalIndex = add $optionalIndex 1 }}
+{{- end }}
+{{- end }}
+    ) {}
+{{- end -}} 

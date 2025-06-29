@@ -1,0 +1,34 @@
+{
+    "name": "{{ .PackageName }}",
+    "description": "{{ .Description }}",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "{{ .JSONNamespace }}\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "{{ .JSONNamespace }}\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^8.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.2",
+        "osteel/openapi-httpfoundation-testing": "^0.11",
+        "laravel/pint": "^1.22",
+        "phpstan/phpstan": "^2.1"
+    },
+    "scripts": {
+        "test": [
+            "phpunit"
+        ],
+        "lint": [
+            "pint --test src/ tests/",
+            "phpstan analyse --memory-limit=2G --level=9 src/"
+        ]
+    }
+} 

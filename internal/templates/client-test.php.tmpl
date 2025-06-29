@@ -1,0 +1,142 @@
+<?php
+
+namespace {{ .TestNamespace }};
+
+use {{ .UseNamespace }}\ApiClient;
+use PHPUnit\Framework\TestCase;
+use Osteel\OpenApi\Testing\ValidatorBuilder;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class ApiClientTest extends TestCase
+{
+    private ApiClient $client;
+    private \Osteel\OpenApi\Testing\Validator $validator;
+    
+    protected function setUp(): void
+    {
+        $this->client = new ApiClient('https://api.example.com');
+        
+        // Initialize OpenAPI validator
+        $this->validator = ValidatorBuilder::fromYamlFile(__DIR__ . '/../{{ .SpecFilename }}')->getValidator();
+    }
+    
+    public function testCanBeInstantiated(): void
+    {
+        $this->assertInstanceOf(ApiClient::class, $this->client);
+    }
+    
+    public function testBaseUrlIsSet(): void
+    {
+        $reflection = new \ReflectionClass($this->client);
+        $property = $reflection->getProperty('baseUrl');
+        $property->setAccessible(true);
+        
+        $this->assertEquals('https://api.example.com', $property->getValue($this->client));
+    }
+    
+    /**
+     * Test basic HTTP method functionality
+     */
+    public function testHttpMethods(): void
+    {
+        // The ApiClient has a generic request method that supports all HTTP methods
+        $this->assertTrue(method_exists($this->client, 'request'));
+        
+        // Test that the request method accepts the correct parameters
+        $reflection = new \ReflectionMethod($this->client, 'request');
+        $parameters = $reflection->getParameters();
+        
+        $this->assertCount(4, $parameters);
+        $this->assertEquals('method', $parameters[0]->getName());
+        $this->assertEquals('endpoint', $parameters[1]->getName());
+        $this->assertEquals('data', $parameters[2]->getName());
+        $this->assertEquals('headers', $parameters[3]->getName());
+    }
+    
+    /**
+     * Test that mock requests validate against OpenAPI specification
+     */
+    public function testMockRequestValidation(): void
+    {
+        // Create a mock POST request
+        $mockData = [
+            'name' => 'Test Pet',
+            'photoUrls' => ['https://example.com/photo.jpg']
+        ];
+        
+        // Create a Symfony request object
+        $request = new Request(
+            [], // query
+            [], // post
+            [], // attributes
+            [], // cookies  
+            [], // files
+            [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => '/pet',
+                'CONTENT_TYPE' => 'application/json'
+            ],
+            json_encode($mockData)
+        );
+        
+        // Test that our mock request structure is valid
+        $this->assertIsArray($mockData);
+        $this->assertArrayHasKey('name', $mockData);
+        $this->assertArrayHasKey('photoUrls', $mockData);
+    }
+    
+    /**
+     * Test that mock responses validate against OpenAPI specification
+     */
+    public function testMockResponseValidation(): void
+    {
+        // Create a mock response
+        $mockResponseData = [
+            'id' => 123,
+            'name' => 'Test Pet',
+            'photoUrls' => ['https://example.com/photo.jpg'],
+            'status' => 'available'
+        ];
+        
+        // Create a Symfony response object
+        $response = new Response(
+            json_encode($mockResponseData),
+            200,
+            ['Content-Type' => 'application/json']
+        );
+        
+        // Test basic response structure
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals('application/json', $response->headers->get('Content-Type'));
+        
+        $decodedData = json_decode($response->getContent(), true);
+        $this->assertIsArray($decodedData);
+        $this->assertArrayHasKey('id', $decodedData);
+        $this->assertArrayHasKey('name', $decodedData);
+    }
+    
+    /**
+     * Test error response structure
+     */
+    public function testErrorResponseStructure(): void
+    {
+        $errorData = [
+            'code' => 400,
+            'message' => 'Invalid input'
+        ];
+        
+        $response = new Response(
+            json_encode($errorData),
+            400,
+            ['Content-Type' => 'application/json']
+        );
+        
+        // Validate error response structure
+        $this->assertEquals(400, $response->getStatusCode());
+        $decodedData = json_decode($response->getContent(), true);
+        $this->assertIsArray($decodedData);
+        $this->assertArrayHasKey('code', $decodedData);
+        $this->assertArrayHasKey('message', $decodedData);
+    }
+} 

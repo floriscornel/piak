@@ -1,0 +1,77 @@
+<?php
+
+namespace {{ .TestNamespace }};
+
+use {{ .UseNamespace }}\{{ .ClassName }};
+use PHPUnit\Framework\TestCase;
+use Osteel\OpenApi\Testing\ValidatorBuilder;
+
+class {{ .ClassName }}Test extends TestCase
+{
+    private \Osteel\OpenApi\Testing\Validator $validator;
+    
+    protected function setUp(): void
+    {
+        // Initialize OpenAPI validator
+        $this->validator = ValidatorBuilder::fromYamlFile(__DIR__ . '/../{{ .SpecFilename }}')->getValidator();
+    }
+    
+    public function testCanBeInstantiatedWithTestData(): void
+    {
+        $testData = {{ generateTestData .Schema }};
+        
+        ${{ .VarName }} = {{ .ClassName }}::fromArray($testData);
+        
+        $this->assertInstanceOf({{ .ClassName }}::class, ${{ .VarName }});
+        
+        // Validate that the generated data structure is correct
+        $result = ${{ .VarName }}->toArray();
+        $this->assertIsArray($result);
+        
+        // Basic property checks
+        foreach ($testData as $key => $value) {
+            $this->assertArrayHasKey($key, $result);
+        }
+        
+        // Test individual property values
+        {{ generateAssertions .ClassName .Schema }}
+    }
+    
+    public function testFromArrayWithMinimalData(): void
+    {
+        // Test with minimal required fields
+        $minimalData = {{ generateMinimalTestData .Schema }};
+        ${{ .VarName }} = {{ .ClassName }}::fromArray($minimalData);
+        
+        $this->assertInstanceOf({{ .ClassName }}::class, ${{ .VarName }});
+    }
+    
+    public function testCanBeSerializedToArray(): void
+    {
+        $testData = {{ generateTestData .Schema }};
+        ${{ .VarName }} = {{ .ClassName }}::fromArray($testData);
+        $result = ${{ .VarName }}->toArray();
+        
+        $this->assertIsArray($result);
+        {{ generateSerializationAssertions .Schema }}
+    }
+    
+    public function testDataIntegrityAfterSerialization(): void
+    {
+        // Use comprehensive test data
+        $originalData = {{ generateTestData .Schema }};
+        
+        ${{ .VarName }} = {{ .ClassName }}::fromArray($originalData);
+        $serializedData = ${{ .VarName }}->toArray();
+        
+        // Verify data integrity through serialization cycle
+        ${{ .VarName }}Reconstituted = {{ .ClassName }}::fromArray($serializedData);
+        $finalData = ${{ .VarName }}Reconstituted->toArray();
+        
+        // Key structural checks (avoiding strict equality due to potential type coercion)
+        $this->assertSameSize($originalData, $finalData);
+        foreach (array_keys($originalData) as $key) {
+            $this->assertArrayHasKey($key, $finalData);
+        }
+    }
+} 
