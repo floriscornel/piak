@@ -8,6 +8,7 @@ BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Go variables
 GOCMD=go
 GOBUILD=$(GOCMD) build
+GORUN=$(GOCMD) run
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
@@ -76,9 +77,8 @@ install-tools:
 install:
 	$(GOBUILD) $(LDFLAGS) -o $(GOPATH)/bin/$(BINARY_NAME) ./
 
-## run-example: Run with example
-run-example: build
-	$(BUILD_DIR)/$(BINARY_NAME) generate -i examples/petstore/openapi.yaml -o /tmp/piak-test
+run:
+	$(GORUN) ./main.go generate
 
 ## help: Show this help message
 help: Makefile
