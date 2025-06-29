@@ -52,20 +52,14 @@ func GetTemplates() (*template.Template, error) {
 
 		// Code generation helpers
 		"generateUseStatements": generateUseStatements,
-		// Complex pattern functions commented out for MVP
-		// "renderUnionTypeDetection":     renderUnionTypeDetection,
-		// "renderDiscriminatorDetection": renderDiscriminatorDetection,
-		// "renderHeuristicDetection":     renderHeuristicDetection,
 		"renderFromArrayMethod": renderFromArrayMethod,
 		"renderToArrayMethod":   renderToArrayMethod,
-		// "renderPropertyValidation":     renderPropertyValidation,
 
 		// Validation and sanitization
 		"isValidPHPIdentifier":  isValidPHPIdentifier,
 		"sanitizePHPIdentifier": sanitizePHPIdentifier,
 
 		// Utility functions
-		// "hasSpecialCase":       hasSpecialCase,
 		"getHTTPClientImports": getHTTPClientImports,
 		"indent":               indent,
 

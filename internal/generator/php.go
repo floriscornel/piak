@@ -43,7 +43,7 @@ func (g *PHPGenerator) GenerateFromModel(model *config.InternalModel) error {
 	}
 
 	// Generate composer.json
-	if err := g.generateComposerJson(model); err != nil {
+	if err := g.generateComposerJSON(model); err != nil {
 		return fmt.Errorf("failed to generate composer.json: %w", err)
 	}
 
@@ -76,7 +76,7 @@ func (g *PHPGenerator) GenerateFromModel(model *config.InternalModel) error {
 	return nil
 }
 
-// createDirectoryStructure creates the src/ and tests/ directories
+// createDirectoryStructure creates the src/ and tests/ directories.
 func (g *PHPGenerator) createDirectoryStructure() error {
 	dirs := []string{
 		g.config.OutputDir,
@@ -93,7 +93,7 @@ func (g *PHPGenerator) createDirectoryStructure() error {
 	return nil
 }
 
-// copyOpenAPISpec copies the OpenAPI specification file to the output directory
+// copyOpenAPISpec copies the OpenAPI specification file to the output directory.
 func (g *PHPGenerator) copyOpenAPISpec() error {
 	// Read the source OpenAPI file
 	sourceData, err := os.ReadFile(g.config.InputFile)
@@ -113,8 +113,8 @@ func (g *PHPGenerator) copyOpenAPISpec() error {
 	return nil
 }
 
-// generateComposerJson creates a composer.json file for the package
-func (g *PHPGenerator) generateComposerJson(model *config.InternalModel) error {
+// generateComposerJSON creates a composer.json file for the package.
+func (g *PHPGenerator) generateComposerJSON(model *config.InternalModel) error {
 	// Prepare template context
 	templateData := struct {
 		PackageName   string
@@ -137,7 +137,7 @@ func (g *PHPGenerator) generateComposerJson(model *config.InternalModel) error {
 	return os.WriteFile(filePath, []byte(content.String()), 0644)
 }
 
-// Helper methods for composer.json generation
+// Helper methods for composer.json generation.
 func (g *PHPGenerator) generatePackageName() string {
 	namespaceParts := strings.Split(g.config.Namespace, "\\")
 	vendor := strings.ToLower(namespaceParts[0])
@@ -201,7 +201,7 @@ func (g *PHPGenerator) generateClient(model *config.InternalModel) error {
 	return nil
 }
 
-// generateTests generates test files in the tests/ directory
+// generateTests generates test files in the tests/ directory.
 func (g *PHPGenerator) generateTests(model *config.InternalModel) error {
 	// Generate model tests
 	for name, schema := range model.Schemas {
@@ -212,7 +212,7 @@ func (g *PHPGenerator) generateTests(model *config.InternalModel) error {
 
 	// Generate API client tests if client is generated
 	if g.config.GenerateClient {
-		if err := g.generateApiClientTest(model); err != nil {
+		if err := g.generateAPIClientTest(model); err != nil {
 			return fmt.Errorf("failed to generate API client tests: %w", err)
 		}
 	}
@@ -225,7 +225,7 @@ func (g *PHPGenerator) generateTests(model *config.InternalModel) error {
 	return nil
 }
 
-// generateModelTest generates a test for a model class
+// generateModelTest generates a test for a model class.
 func (g *PHPGenerator) generateModelTest(name string, schema *config.SchemaModel) error {
 	testContent := g.generateModelTestContent(name, schema)
 	filename := fmt.Sprintf("%sTest.php", name)
@@ -234,16 +234,16 @@ func (g *PHPGenerator) generateModelTest(name string, schema *config.SchemaModel
 	return os.WriteFile(filePath, []byte(testContent), 0644)
 }
 
-// generateApiClientTest generates tests for the API client
-func (g *PHPGenerator) generateApiClientTest(model *config.InternalModel) error {
-	testContent := g.generateApiClientTestContent(model)
+// generateAPIClientTest generates tests for the API client.
+func (g *PHPGenerator) generateAPIClientTest(model *config.InternalModel) error {
+	testContent := g.generateAPIClientTestContent(model)
 	filename := "ApiClientTest.php"
 	filePath := filepath.Join(g.config.OutputDir, "tests", filename)
 
 	return os.WriteFile(filePath, []byte(testContent), 0644)
 }
 
-// generatePhpUnitConfig generates phpunit.xml configuration
+// generatePHPUnitConfig generates phpunit.xml configuration.
 func (g *PHPGenerator) generatePhpUnitConfig() error {
 	// Use template to generate content
 	var content strings.Builder
@@ -256,7 +256,7 @@ func (g *PHPGenerator) generatePhpUnitConfig() error {
 	return os.WriteFile(filePath, []byte(content.String()), 0644)
 }
 
-func (g *PHPGenerator) generateClassContent(className string, schema *config.SchemaModel) (string, error) {
+func (g *PHPGenerator) generateClassContent(_ string, schema *config.SchemaModel) (string, error) {
 	// Prepare template context
 	templateData := struct {
 		*config.SchemaModel
@@ -296,7 +296,7 @@ func (g *PHPGenerator) generateClientContent(model *config.InternalModel) (strin
 	return content.String(), nil
 }
 
-// generateModelTestContent creates test content for a model class
+// generateModelTestContent creates test content for a model class.
 func (g *PHPGenerator) generateModelTestContent(name string, schema *config.SchemaModel) string {
 	// Prepare template context
 	templateData := struct {
@@ -326,8 +326,8 @@ func (g *PHPGenerator) generateModelTestContent(name string, schema *config.Sche
 	return content.String()
 }
 
-// generateApiClientTestContent creates test content for the API client
-func (g *PHPGenerator) generateApiClientTestContent(model *config.InternalModel) string {
+// generateAPIClientTestContent creates test content for the API client.
+func (g *PHPGenerator) generateAPIClientTestContent(_ *config.InternalModel) string {
 	// Prepare template context
 	templateData := struct {
 		TestNamespace string
@@ -350,8 +350,8 @@ func (g *PHPGenerator) generateApiClientTestContent(model *config.InternalModel)
 	return content.String()
 }
 
-// generateReadme creates a README.md file for the generated package
-func (g *PHPGenerator) generateReadme(model *config.InternalModel) error {
+// generateReadme creates a README.md file for the generated package.
+func (g *PHPGenerator) generateReadme(_ *config.InternalModel) error {
 	// Prepare template context
 	templateData := struct {
 		PackageName    string

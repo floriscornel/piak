@@ -1,9 +1,0 @@
-{{- define "fromArrayValidation" -}}
-{{- range .Properties }}
-{{- if .Required }}
-{{- template "requiredFieldValidation" . }}
-{{- else }}
-{{- template "optionalFieldProcessing" . }}
-{{- end }}
-{{- end }}
-{{- end -}} 

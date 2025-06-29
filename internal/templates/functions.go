@@ -10,13 +10,13 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// PHP-specific template helper functions for MVP
+// PHP-specific template helper functions
 
-// formatPHPType formats a PHP type with proper nullable syntax (simplified for MVP).
+// formatPHPType formats a PHP type with proper nullable syntax.
 func formatPHPType(phpType config.PHPType) string {
 	var typeStr string
 
-	// Simplified for MVP - handle basic types and arrays
+	// Handle basic types and arrays
 	if phpType.IsArray {
 		typeStr = "array" // We'll use PHPDoc for array types
 	} else {
@@ -30,13 +30,13 @@ func formatPHPType(phpType config.PHPType) string {
 	return typeStr
 }
 
-// formatPHPDocType formats a PHP type for PHPDoc comments (simplified for MVP).
+// formatPHPDocType formats a PHP type for PHPDoc comments.
 func formatPHPDocType(phpType config.PHPType) string {
 	var typeStr string
 
-	// Simplified for MVP - handle basic array types
+	// Handle basic array types
 	if phpType.IsArray {
-		// For MVP, we'll just use array<string, mixed> for simplicity
+		// Use array<string, mixed> for simplicity
 		typeStr = "array<string, mixed>"
 	} else {
 		typeStr = phpType.Name
@@ -194,7 +194,7 @@ func sanitizePHPIdentifier(name string) string {
 	return strcase.ToCamel(sanitized)
 }
 
-// renderArrayType handles array type rendering for MVP
+// renderArrayType handles array type rendering.
 func renderArrayType(phpType config.PHPType) string {
 	if phpType.IsArray {
 		return "array"
@@ -202,9 +202,9 @@ func renderArrayType(phpType config.PHPType) string {
 	return phpType.Name
 }
 
-// getHTTPClientImports returns imports for HTTP client (simplified for MVP)
-func getHTTPClientImports(clientType interface{}) []string {
-	// For MVP, return empty array - no special imports needed
+// getHTTPClientImports returns imports for HTTP client.
+func getHTTPClientImports(_ interface{}) []string {
+	// Return empty array - no special imports needed currently
 	return []string{}
 }
 
@@ -254,7 +254,7 @@ func renderToArrayMethod(model *config.SchemaModel) string {
 
 // Test data generation template helpers
 
-// generateTestData creates sample test data for a schema
+// generateTestData creates sample test data for a schema.
 func generateTestData(schema *config.SchemaModel) string {
 	var properties []string
 
@@ -266,7 +266,7 @@ func generateTestData(schema *config.SchemaModel) string {
 	return fmt.Sprintf("[\n        %s\n    ]", strings.Join(properties, ",\n        "))
 }
 
-// generatePropertyTestValue creates a test value for a property
+// generatePropertyTestValue creates a test value for a property.
 func generatePropertyTestValue(prop *config.Property) string {
 	switch prop.PHPType.Name {
 	case "string":
@@ -287,7 +287,7 @@ func generatePropertyTestValue(prop *config.Property) string {
 	}
 }
 
-// generateAssertions creates assertions for testing property values
+// generateAssertions creates assertions for testing property values.
 func generateAssertions(className string, schema *config.SchemaModel) string {
 	var assertions []string
 	varName := strings.ToLower(className)
@@ -301,7 +301,7 @@ func generateAssertions(className string, schema *config.SchemaModel) string {
 	return strings.Join(assertions, "\n        ")
 }
 
-// generateSerializationAssertions creates assertions for testing serialization
+// generateSerializationAssertions creates assertions for testing serialization.
 func generateSerializationAssertions(schema *config.SchemaModel) string {
 	var assertions []string
 
@@ -313,7 +313,7 @@ func generateSerializationAssertions(schema *config.SchemaModel) string {
 	return strings.Join(assertions, "\n        ")
 }
 
-// generateMinimalTestData creates minimal test data with only required fields
+// generateMinimalTestData creates minimal test data with only required fields.
 func generateMinimalTestData(schema *config.SchemaModel) string {
 	var properties []string
 
@@ -337,7 +337,7 @@ func generateMinimalTestData(schema *config.SchemaModel) string {
 
 // Composer.json template helpers
 
-// generatePackageName generates a package name from the namespace
+// generatePackageName generates a package name from the namespace.
 func generatePackageName(namespace string) string {
 	// Convert namespace to lowercase with hyphens
 	namespaceParts := strings.Split(namespace, "\\")
@@ -351,12 +351,12 @@ func generatePackageName(namespace string) string {
 	return packageName
 }
 
-// prepareJSONNamespace escapes backslashes for JSON
+// prepareJSONNamespace escapes backslashes for JSON.
 func prepareJSONNamespace(namespace string) string {
 	return strings.ReplaceAll(namespace, "\\", "\\\\")
 }
 
-// cleanDescription cleans and escapes description for JSON
+// cleanDescription cleans and escapes description for JSON.
 func cleanDescription(description string) string {
 	cleaned := strings.ReplaceAll(description, "\n", " ")
 	cleaned = strings.ReplaceAll(cleaned, "\r", " ")

@@ -156,7 +156,7 @@ func mapOpenAPITypeToPHP(schema *openapi3.Schema) string {
 	case arrayType:
 		return "array"
 	case "object":
-		return "array" // For MVP, treat objects as arrays
+		return "array" // Treat objects as arrays for simplicity
 	default:
 		return "mixed"
 	}

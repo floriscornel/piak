@@ -1,9 +1,0 @@
-{{- define "fromArrayMethod" -}}
-
-{{- template "fromArraySignature" . }}
-    {
-{{- template "fromArrayValidation" . }}
-
-{{- template "fromArrayInstantiation" . }}
-    }
-{{- end -}} 

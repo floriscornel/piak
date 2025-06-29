@@ -1,9 +1,0 @@
-{{- define "requiredFieldValidation" -}}
-        // Required field: {{ .Name }}
-        ${{ .Name }} = $data['{{ .Name }}'] ?? throw new \InvalidArgumentException('{{ $.Name }} {{ .Name }} is required');
-{{- template "typeValidation" . }}
-{{- if .PHPType.IsArray }}
-{{- template "arrayValidation" . }}
-{{- end }}
-
-{{- end -}} 
