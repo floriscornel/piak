@@ -12,6 +12,7 @@ php:
   base_path: "src"
   use_strict_types: true
   generate_docblocks: true
+  generateFromArray: true
 
 # OpenAPI Processing Settings
 openapi:

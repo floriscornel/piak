@@ -19,12 +19,17 @@ type Generator struct {
 }
 
 // NewGenerator creates a new Generator instance.
-func NewGenerator(cfg *types.GeneratorConfig) *Generator {
+func NewGenerator(cfg *types.GeneratorConfig) (*Generator, error) {
+	phpGen, err := NewPHPGenerator(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create PHP generator: %w", err)
+	}
+
 	return &Generator{
 		config: cfg,
 		parser: parser.New(cfg.OpenAPI.ValidateSpec, cfg.OpenAPI.ResolveRefs),
-		phpGen: NewPHPGenerator(cfg),
-	}
+		phpGen: phpGen,
+	}, nil
 }
 
 // Generate performs the complete generation process.
@@ -63,7 +68,7 @@ func (g *Generator) Generate() error {
 			Name:         name,
 			PHPType:      name, // TODO: Apply proper PHP naming conventions
 			OriginalName: name,
-			Properties:   convertProperties(schema.Properties),
+			Properties:   convertProperties(schema.Properties, schema.Required),
 			Description:  schema.Description,
 			IsEnum:       schema.IsEnum,
 			EnumValues:   schema.EnumValues,
@@ -99,22 +104,41 @@ func (g *Generator) Generate() error {
 }
 
 // Helper function to convert old properties to new format.
-func convertProperties(oldProps map[string]*openapi3.SchemaRef) []*types.Property {
+func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []string) []*types.Property {
 	var properties []*types.Property
+
+	// Create a map for quick required field lookup
+	requiredMap := make(map[string]bool)
+	for _, reqField := range required {
+		requiredMap[reqField] = true
+	}
 
 	for name, propRef := range oldProps {
 		if propRef.Value != nil {
+			isRequired := requiredMap[name]
+
 			phpType := types.PHPType{
 				Name:       mapOpenAPITypeToPHP(propRef.Value),
-				IsNullable: false, // TODO: determine nullability
+				IsNullable: !isRequired, // Required fields are not nullable
 				DocComment: mapOpenAPITypeToPHP(propRef.Value),
+			}
+
+			// Handle array types with proper item type detection
+			if phpType.Name == "array" && propRef.Value.Items != nil {
+				itemType := mapOpenAPITypeToPHP(propRef.Value.Items.Value)
+				phpType.IsArray = true
+				phpType.ArrayItemType = &types.PHPType{
+					Name:       itemType,
+					IsNullable: false,
+					DocComment: itemType,
+				}
 			}
 
 			prop := &types.Property{
 				Name:        name,
 				PHPType:     phpType,
 				OpenAPIType: propRef.Value,
-				Required:    false, // TODO: determine from required array
+				Required:    isRequired,
 				Description: propRef.Value.Description,
 			}
 			properties = append(properties, prop)

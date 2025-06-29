@@ -8,15 +8,7 @@ declare(strict_types=1);
 namespace {{ .Config.PHP.Namespace }};
 {{- end }}
 
-{{- /* Generate imports for union member types */ -}}
-{{- $imports := slice }}
-{{- range .UnionMembers }}
-  {{- $imports = append $imports .ImportStatements }}
-{{- end }}
-{{- if $imports }}
-
-{{ generateUseStatements $imports }}
-{{- end }}
+{{- /* Import statements will be generated automatically when needed */ -}}
 
 {{- if .Config.PHP.GenerateDocblocks }}
 

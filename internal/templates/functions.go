@@ -33,12 +33,57 @@ func toScreamingSnake(s string) string {
 	return strcase.ToScreamingSnake(s)
 }
 
-func pluralize(s string) string {
-	return inflection.Plural(s)
+func toPascal(s string) string {
+	return strcase.ToCamel(s)
+}
+
+func toKebab(s string) string {
+	return strcase.ToKebab(s)
+}
+
+func title(s string) string {
+	return strings.Title(s)
+}
+
+func capitalize(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+func uncapitalize(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToLower(s[:1]) + s[1:]
+}
+
+func trimSpace(s string) string {
+	return strings.TrimSpace(s)
+}
+
+func replace(old, new, s string) string {
+	return strings.ReplaceAll(s, old, new)
+}
+
+func split(sep, s string) []string {
+	return strings.Split(s, sep)
 }
 
 func singularize(s string) string {
-	return inflection.Singular(s)
+	if strings.HasSuffix(s, "ies") {
+		return strings.TrimSuffix(s, "ies") + "y"
+	} else if strings.HasSuffix(s, "es") {
+		return strings.TrimSuffix(s, "es")
+	} else if strings.HasSuffix(s, "s") {
+		return strings.TrimSuffix(s, "s")
+	}
+	return s
+}
+
+func pluralize(s string) string {
+	return inflection.Plural(s)
 }
 
 func join(sep string, elems []string) string {
@@ -51,10 +96,6 @@ func hasPrefix(s, prefix string) bool {
 
 func hasSuffix(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
-}
-
-func trimSpace(s string) string {
-	return strings.TrimSpace(s)
 }
 
 func sub(a, b int) int {
@@ -397,7 +438,22 @@ func renderArrayType(phpType types.PHPType) string {
 }
 
 // hasSpecialCase checks if a model has a specific special case.
-func hasSpecialCase(model *types.SchemaModel, specialCase types.SpecialCase) bool {
+func hasSpecialCase(data interface{}, specialCase types.SpecialCase) bool {
+	var model *types.SchemaModel
+
+	// Handle both direct SchemaModel and wrapped struct
+	switch v := data.(type) {
+	case *types.SchemaModel:
+		model = v
+	case struct {
+		*types.SchemaModel
+		Config *types.GeneratorConfig
+	}:
+		model = v.SchemaModel
+	default:
+		return false
+	}
+
 	for _, sc := range model.SpecialCases {
 		if sc == specialCase {
 			return true

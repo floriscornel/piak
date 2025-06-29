@@ -15,20 +15,7 @@ namespace {{ .Config.PHP.Namespace }};
 {{ generateUseStatements $clientImports }}
 {{- end }}
 
-{{- /* Generate model imports */ -}}
-{{- $modelImports := slice }}
-{{- range .Schemas }}
-  {{- $modelImports = append $modelImports (printf "%s\\%s" $.Config.PHP.Namespace .Name) }}
-{{- end }}
-{{- range .Endpoints }}
-  {{- range .Responses }}
-    {{- if .Schema }}
-      {{- $modelImports = append $modelImports (printf "%s\\%s" $.Config.PHP.Namespace .Schema.Name) }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-
-{{ generateUseStatements $modelImports }}
+{{- /* Model imports will be generated automatically when needed */ -}}
 {{- if .Config.PHP.GenerateDocblocks }}
 
 /**
@@ -111,14 +98,11 @@ class ApiClient
      */
 {{- end }}
     public function {{ .MethodName | toLower }}(
-{{- $allParams := .Parameters }}
-{{- if .RequestBody }}
-  {{- $requestParam := .RequestBody }}
-  {{- $requestParam.Name = "requestBody" }}
-  {{- $allParams = append $allParams $requestParam }}
+{{- range $index, $param := .Parameters }}
+        {{ formatConstructorParam $param (eq $index (sub (len .Parameters) 1)) }}
 {{- end }}
-{{- range $index, $param := $allParams }}
-        {{ formatConstructorParam $param (eq $index (sub (len $allParams) 1)) }}
+{{- if .RequestBody }}
+        ,{{ .RequestBody.Schema.Name }} $requestBody
 {{- end }}
     ){{ if .Responses }}{{ $primaryResponse := index .Responses 0 }}{{ if $primaryResponse.Schema }}: {{ $primaryResponse.Schema.Name }}{{ else }}: array{{ end }}{{ else }}: array{{ end }}
     {
@@ -127,7 +111,7 @@ class ApiClient
 {{- /* Handle path parameters */ -}}
 {{- range .Parameters }}
 {{- if eq .In "path" }}
-        $url = str_replace('{{{ .Name }}}', (string) ${{ .Name | toSnake }}, $url);
+        $url = str_replace('{{ "{" }}{{ .Name }}{{ "}" }}', (string) ${{ .Name | toSnake }}, $url);
 {{- end }}
 {{- end }}
 
@@ -220,21 +204,21 @@ class ApiClient
         $error = curl_error($ch);
         curl_close($ch);
         
-        if ($response === false || $error) {
+        if ($error) {
             throw new \Exception('cURL error: ' . $error);
         }
         
         if ($httpCode >= 400) {
-            throw new \Exception('HTTP error: ' . $httpCode);
+            throw new \Exception('HTTP request failed with status: ' . $httpCode);
         }
         
         $data = json_decode($response, true);
+        
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception('Failed to decode JSON response: ' . json_last_error_msg());
         }
 {{- end }}
 
-        // Map response data to model
 {{- if .Responses }}
 {{- $primaryResponse := index .Responses 0 }}
 {{- if $primaryResponse.Schema }}
@@ -247,4 +231,103 @@ class ApiClient
 {{- end }}
     }
 {{- end }}
+
+    /**
+     * Make a generic HTTP request
+     * 
+     * @param string $method HTTP method
+     * @param string $endpoint API endpoint
+     * @param array<string, mixed> $data Request data
+     * @param array<string, string> $headers Additional headers
+     * @return array<string, mixed>
+{{- if eq .Config.HTTPClient "guzzle" }}
+     * @throws GuzzleException
+{{- end }}
+     * @throws \Exception
+     */
+    public function request(
+        string $method,
+        string $endpoint,
+        array $data = [],
+        array $headers = []
+    ): array {
+        $url = $this->baseUrl . '/' . ltrim($endpoint, '/');
+        $allHeaders = array_merge($this->defaultHeaders, $headers);
+        
+{{- if eq .Config.HTTPClient "guzzle" }}
+        $options = array_merge($this->defaultOptions, [
+            'headers' => $allHeaders,
+        ]);
+        
+        if (!empty($data)) {
+            if (in_array(strtoupper($method), ['GET', 'DELETE'])) {
+                $options['query'] = $data;
+            } else {
+                $options['json'] = $data;
+            }
+        }
+        
+        $response = $this->client->request($method, $url, $options);
+        $responseData = json_decode($response->getBody()->getContents(), true);
+{{- else if eq .Config.HTTPClient "laravel" }}
+        $request = $this->http->withHeaders($allHeaders);
+        
+        if (in_array(strtoupper($method), ['GET', 'DELETE']) && !empty($data)) {
+            $request = $request->withQuery($data);
+            $response = $request->{strtolower($method)}($url);
+        } else {
+            $response = $request->{strtolower($method)}($url, $data);
+        }
+        
+        if (!$response->successful()) {
+            throw new \Exception('HTTP request failed with status: ' . $response->status());
+        }
+        
+        $responseData = $response->json();
+{{- else if eq .Config.HTTPClient "curl" }}
+        $ch = curl_init();
+        
+        $curlOptions = [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => strtoupper($method),
+            CURLOPT_HTTPHEADER => array_map(
+                fn($key, $value) => "$key: $value",
+                array_keys($allHeaders),
+                array_values($allHeaders)
+            ),
+        ];
+        
+        if (!empty($data)) {
+            if (in_array(strtoupper($method), ['GET', 'DELETE'])) {
+                $curlOptions[CURLOPT_URL] .= '?' . http_build_query($data);
+            } else {
+                $curlOptions[CURLOPT_POSTFIELDS] = json_encode($data);
+            }
+        }
+        
+        curl_setopt_array($ch, $curlOptions);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($error) {
+            throw new \Exception('cURL error: ' . $error);
+        }
+        
+        if ($httpCode >= 400) {
+            throw new \Exception('HTTP request failed with status: ' . $httpCode);
+        }
+        
+        $responseData = json_decode($response, true);
+{{- end }}
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('Failed to decode JSON response: ' . json_last_error_msg());
+        }
+        
+        return $responseData;
+    }
 } 

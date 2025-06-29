@@ -188,7 +188,10 @@ func handleDryRun(cfg *config.GenerateConfig) error {
 	genConfig := cfg.ToGeneratorConfig()
 
 	// Create generator
-	gen := generator.NewGenerator(genConfig)
+	gen, err := generator.NewGenerator(genConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create generator: %w", err)
+	}
 
 	// TODO: Add a DryRun method to generator interface
 	// For now, just show what would be done
@@ -226,7 +229,10 @@ func executeGeneration(cfg *config.GenerateConfig) error {
 	genConfig := cfg.ToGeneratorConfig()
 
 	// Create and run generator
-	gen := generator.NewGenerator(genConfig)
+	gen, err := generator.NewGenerator(genConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create generator: %w", err)
+	}
 
 	fmt.Printf("🔄 Generating PHP code from: %s\n", cfg.Input)
 
