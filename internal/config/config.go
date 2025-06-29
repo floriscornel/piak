@@ -7,36 +7,35 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/floriscornel/piak/internal/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+// ValidHTTPClients are the valid HTTP client types.
+var ValidHTTPClients = []string{
+	string(GuzzleClient),
+	string(CurlClient),
+	string(LaravelClient),
+}
+
 // Config holds the application configuration.
 type Config struct {
-	Input        string              `mapstructure:"input"         validate:"required" flag:"input,i" usage:"Input OpenAPI specification file"`
-	Output       string              `mapstructure:"output"        validate:"required" flag:"output,o" usage:"Output directory for generated PHP files"`
-	Verbose      bool                `mapstructure:"verbose"                           flag:"verbose,v" usage:"Enable verbose output"`
-	PHP          types.PHPConfig     `mapstructure:"php"`
-	OpenAPI      types.OpenAPIConfig `mapstructure:"openapi"`
-	OutputConfig types.OutputConfig  `mapstructure:"output_config"`
+	Input        string        `mapstructure:"input"         validate:"required" flag:"input,i" usage:"Input OpenAPI specification file"`
+	Output       string        `mapstructure:"output"        validate:"required" flag:"output,o" usage:"Output directory for generated PHP files"`
+	Verbose      bool          `mapstructure:"verbose"                           flag:"verbose,v" usage:"Enable verbose output"`
+	PHP          PHPConfig     `mapstructure:"php"`
+	OpenAPI      OpenAPIConfig `mapstructure:"openapi"`
+	OutputConfig OutputConfig  `mapstructure:"output_config"`
 }
 
 // GenerateConfig holds generation-specific configuration.
 type GenerateConfig struct {
 	*Config
-	HTTPClient     types.HTTPClientType `mapstructure:"http_client"     flag:"http-client" usage:"HTTP client to use (guzzle, curl, laravel)" default:"guzzle"`
-	StrictTypes    bool                 `mapstructure:"strict_types"    flag:"strict-types" usage:"Generate strict PHP types and validation" default:"true"`
-	GenerateClient bool                 `mapstructure:"generate_client" flag:"generate-client" usage:"Generate HTTP client code" default:"true"`
-	GenerateTests  bool                 `mapstructure:"generate_tests"  flag:"generate-tests" usage:"Generate test files" default:"false"`
-	DryRun         bool                 `mapstructure:"dry_run"         flag:"dry-run" usage:"Show what would be generated without creating files" default:"false"`
-}
-
-// ValidHTTPClients contains all valid HTTP client types.
-var ValidHTTPClients = []string{
-	string(types.GuzzleClient),
-	string(types.LaravelClient),
-	string(types.CurlClient),
+	HTTPClient     HTTPClientType `mapstructure:"http_client"     flag:"http-client" usage:"HTTP client to use (guzzle, curl, laravel)" default:"guzzle"`
+	StrictTypes    bool           `mapstructure:"strict_types"    flag:"strict-types" usage:"Generate strict PHP types and validation" default:"true"`
+	GenerateClient bool           `mapstructure:"generate_client" flag:"generate-client" usage:"Generate HTTP client code" default:"true"`
+	GenerateTests  bool           `mapstructure:"generate_tests"  flag:"generate-tests" usage:"Generate test files" default:"false"`
+	DryRun         bool           `mapstructure:"dry_run"         flag:"dry-run" usage:"Show what would be generated without creating files" default:"false"`
 }
 
 // Loader handles configuration loading and validation.
@@ -273,7 +272,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("output_config.create_directories", true)
 
 	// Generate defaults
-	v.SetDefault("http_client", string(types.GuzzleClient))
+	v.SetDefault("http_client", string(GuzzleClient))
 	v.SetDefault("strict_types", true)
 	v.SetDefault("generate_client", true)
 	v.SetDefault("generate_tests", false)
@@ -323,8 +322,8 @@ func (l *Loader) GetConfigFileUsed() string {
 }
 
 // ToGeneratorConfig converts the generate config to a generator config.
-func (cfg *GenerateConfig) ToGeneratorConfig() *types.GeneratorConfig {
-	return &types.GeneratorConfig{
+func (cfg *GenerateConfig) ToGeneratorConfig() *GeneratorConfig {
+	return &GeneratorConfig{
 		InputFile:      cfg.Input,
 		OutputDir:      cfg.Output,
 		HTTPClient:     cfg.HTTPClient,

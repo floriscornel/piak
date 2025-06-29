@@ -6,110 +6,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/floriscornel/piak/internal/types"
+	"github.com/floriscornel/piak/internal/config"
 	"github.com/iancoleman/strcase"
-	"github.com/jinzhu/inflection"
 )
-
-// Template helper functions
-
-func toCamel(s string) string {
-	return strcase.ToCamel(s)
-}
-
-func toSnake(s string) string {
-	return strcase.ToSnake(s)
-}
-
-func toLower(s string) string {
-	return strings.ToLower(s)
-}
-
-func toUpper(s string) string {
-	return strings.ToUpper(s)
-}
-
-func toScreamingSnake(s string) string {
-	return strcase.ToScreamingSnake(s)
-}
-
-func toPascal(s string) string {
-	return strcase.ToCamel(s)
-}
-
-func toKebab(s string) string {
-	return strcase.ToKebab(s)
-}
-
-func title(s string) string {
-	return strings.Title(s)
-}
-
-func capitalize(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
-}
-
-func uncapitalize(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	return strings.ToLower(s[:1]) + s[1:]
-}
-
-func trimSpace(s string) string {
-	return strings.TrimSpace(s)
-}
-
-func replace(old, new, s string) string {
-	return strings.ReplaceAll(s, old, new)
-}
-
-func split(sep, s string) []string {
-	return strings.Split(s, sep)
-}
-
-func singularize(s string) string {
-	if strings.HasSuffix(s, "ies") {
-		return strings.TrimSuffix(s, "ies") + "y"
-	} else if strings.HasSuffix(s, "es") {
-		return strings.TrimSuffix(s, "es")
-	} else if strings.HasSuffix(s, "s") {
-		return strings.TrimSuffix(s, "s")
-	}
-	return s
-}
-
-func pluralize(s string) string {
-	return inflection.Plural(s)
-}
-
-func join(sep string, elems []string) string {
-	return strings.Join(elems, sep)
-}
-
-func hasPrefix(s, prefix string) bool {
-	return strings.HasPrefix(s, prefix)
-}
-
-func hasSuffix(s, suffix string) bool {
-	return strings.HasSuffix(s, suffix)
-}
-
-func sub(a, b int) int {
-	return a - b
-}
-
-func add(a, b int) int {
-	return a + b
-}
 
 // PHP-specific template helper functions
 
 // formatPHPType formats a PHP type with proper nullable and union syntax.
-func formatPHPType(phpType types.PHPType) string {
+func formatPHPType(phpType config.PHPType) string {
 	var typeStr string
 
 	switch {
@@ -133,7 +37,7 @@ func formatPHPType(phpType types.PHPType) string {
 }
 
 // formatPHPDocType formats a PHP type for PHPDoc comments.
-func formatPHPDocType(phpType types.PHPType) string {
+func formatPHPDocType(phpType config.PHPType) string {
 	var typeStr string
 
 	switch {
@@ -188,42 +92,24 @@ func generateUseStatements(imports []string) string {
 }
 
 // formatConstructorParam formats a constructor parameter with proper type and default.
-func formatConstructorParam(prop *types.Property, isLast bool) string {
-	phpType := formatPHPType(prop.PHPType)
-	paramName := toSnake(prop.Name)
+func formatConstructorParam(prop *config.Property) string {
+	paramType := prop.PHPType.Name
+	paramName := strcase.ToSnake(prop.Name)
 
-	var param strings.Builder
-
-	// Add type hint
-	if phpType != "" {
-		param.WriteString(phpType)
-		param.WriteString(" ")
-	}
-
-	// Add parameter name
-	param.WriteString("$")
-	param.WriteString(paramName)
-
-	// Add default value for optional parameters
 	if !prop.Required {
-		if prop.DefaultValue != nil {
-			param.WriteString(" = ")
-			param.WriteString(formatDefaultValue(prop.DefaultValue))
-		} else {
-			param.WriteString(" = null")
-		}
+		paramType = "?" + paramType
+		return fmt.Sprintf("%s $%s = null", paramType, paramName)
 	}
 
-	// Add comma if not last parameter
-	if !isLast {
-		param.WriteString(",")
-	}
-
-	return param.String()
+	return fmt.Sprintf("%s $%s", paramType, paramName)
 }
 
-// formatDefaultValue formats a default value for PHP code.
+// formatDefaultValue formats a default value for PHP.
 func formatDefaultValue(value interface{}) string {
+	if value == nil {
+		return "null"
+	}
+
 	switch v := value.(type) {
 	case string:
 		return fmt.Sprintf("'%s'", strings.ReplaceAll(v, "'", "\\'"))
@@ -232,143 +118,109 @@ func formatDefaultValue(value interface{}) string {
 			return "true"
 		}
 		return "false"
-	case int, int32, int64:
-		return fmt.Sprintf("%d", v)
-	case float32, float64:
-		return fmt.Sprintf("%g", v)
-	case nil:
-		return "null"
+	case int, int32, int64, float32, float64:
+		return fmt.Sprintf("%v", v)
 	default:
 		return "null"
 	}
 }
 
-// renderUnionTypeDetection generates type detection logic for union types.
-func renderUnionTypeDetection(context *types.UnionTypeContext) string {
+// renderUnionTypeDetection generates detection logic for union types.
+func renderUnionTypeDetection(context *config.UnionTypeContext) string {
 	if context.Discriminator != nil {
-		return renderDiscriminatorDetection(context.Discriminator)
+		return renderDiscriminatorDetection(context)
 	}
-
 	return renderHeuristicDetection(context)
 }
 
-// renderDiscriminatorDetection generates discriminator-based type detection.
-func renderDiscriminatorDetection(discriminator *types.DiscriminatorInfo) string {
+// renderDiscriminatorDetection generates discriminator-based detection.
+func renderDiscriminatorDetection(context *config.UnionTypeContext) string {
 	var result strings.Builder
+	result.WriteString(fmt.Sprintf("if (!isset($data['%s'])) {\n", context.Discriminator.PropertyName))
+	result.WriteString("    throw new \\InvalidArgumentException('Missing discriminator property');\n")
+	result.WriteString("}\n\n")
 
-	result.WriteString(fmt.Sprintf("match ($data['%s']) {\n", discriminator.PropertyName))
-
-	for value, className := range discriminator.ValueMapping {
-		result.WriteString(fmt.Sprintf("    '%s' => %s::fromArray($data),\n", value, className))
+	result.WriteString(fmt.Sprintf("switch ($data['%s']) {\n", context.Discriminator.PropertyName))
+	for value, className := range context.Discriminator.ValueMapping {
+		result.WriteString(fmt.Sprintf("    case '%s':\n", value))
+		result.WriteString(fmt.Sprintf("        return %s::fromArray($data);\n", className))
 	}
-
-	result.WriteString(fmt.Sprintf(
-		"    default => throw new \\InvalidArgumentException(\"Unknown %s type: {$data['%s']}\")\n",
-		discriminator.PropertyName,
-		discriminator.PropertyName,
-	))
+	result.WriteString("    default:\n")
+	result.WriteString("        throw new \\InvalidArgumentException('Unknown discriminator value');\n")
 	result.WriteString("}")
 
 	return result.String()
 }
 
-// renderHeuristicDetection generates heuristic-based type detection.
-func renderHeuristicDetection(context *types.UnionTypeContext) string {
+// renderHeuristicDetection generates heuristic-based detection.
+func renderHeuristicDetection(context *config.UnionTypeContext) string {
 	var result strings.Builder
+	result.WriteString("// Try each type in order\n")
 
-	// Generate detection logic based on unique properties
 	for i, member := range context.UnionMembers {
-		if i > 0 {
-			result.WriteString("} else ")
-		}
-
-		result.WriteString("if (")
-		// Add unique property checks (this would need more context about unique properties)
-		result.WriteString("isset($data['uniqueProperty'])) {\n")
+		result.WriteString("try {\n")
 		result.WriteString(fmt.Sprintf("    return %s::fromArray($data);\n", member.Name))
+		result.WriteString("} catch (\\Throwable $e) {\n")
+		if i == len(context.UnionMembers)-1 {
+			result.WriteString("    throw new \\InvalidArgumentException('Data matches no union type');\n")
+		}
+		result.WriteString("}\n\n")
 	}
-
-	result.WriteString("} else {\n")
-	result.WriteString("    throw new \\InvalidArgumentException('Unable to determine union type from data');\n")
-	result.WriteString("}")
 
 	return result.String()
 }
 
-// renderFromArrayMethod generates a fromArray factory method.
-func renderFromArrayMethod(model *types.SchemaModel) string {
+// renderFromArrayMethod generates a fromArray method for models.
+func renderFromArrayMethod(model *config.SchemaModel) string {
 	var result strings.Builder
 
-	result.WriteString("public static function fromArray(array $data): self\n{\n")
+	result.WriteString("/**\n")
+	result.WriteString(" * Create instance from array data\n")
+	result.WriteString(" * @param array<string, mixed> $data\n")
+	result.WriteString(" * @return self\n")
+	result.WriteString(" */\n")
+	result.WriteString("public static function fromArray(array $data): self\n")
+	result.WriteString("{\n")
 
-	// Add validation if needed
+	// Generate validation and assignment logic
 	for _, prop := range model.Properties {
 		if prop.Required {
-			result.WriteString(fmt.Sprintf(
-				"    if (!isset($data['%s'])) {\n        throw new \\InvalidArgumentException('%s is required');\n    }\n\n",
-				prop.Name,
-				prop.Name,
-			))
+			result.WriteString(fmt.Sprintf("    if (!isset($data['%s'])) {\n", prop.Name))
+			result.WriteString(fmt.Sprintf("        throw new \\InvalidArgumentException('Missing required field: %s');\n", prop.Name))
+			result.WriteString("    }\n")
 		}
 	}
 
-	// Generate constructor call
-	result.WriteString("    return new self(\n")
+	result.WriteString("\n    return new self(\n")
 	for i, prop := range model.Properties {
-		paramName := toSnake(prop.Name)
-		isLast := i == len(model.Properties)-1
-
-		if prop.Required {
-			result.WriteString(fmt.Sprintf("        %s: $data['%s']", paramName, prop.Name))
+		propAccess := fmt.Sprintf("$data['%s'] ?? null", prop.Name)
+		if i < len(model.Properties)-1 {
+			result.WriteString(fmt.Sprintf("        %s,\n", propAccess))
 		} else {
-			result.WriteString(fmt.Sprintf("        %s: $data['%s'] ?? null", paramName, prop.Name))
+			result.WriteString(fmt.Sprintf("        %s\n", propAccess))
 		}
-
-		if !isLast {
-			result.WriteString(",")
-		}
-		result.WriteString("\n")
 	}
 	result.WriteString("    );\n")
-
 	result.WriteString("}")
 
 	return result.String()
 }
 
-// renderPropertyValidation generates validation logic for a property.
-func renderPropertyValidation(rules []*types.ValidationRule) string {
+// renderPropertyValidation generates validation rules for properties.
+func renderPropertyValidation(rules []*config.ValidationRule) string {
 	if len(rules) == 0 {
 		return ""
 	}
 
 	var result strings.Builder
-
 	for _, rule := range rules {
 		switch rule.Type {
-		case "enum":
-			if values, ok := rule.Value.([]interface{}); ok {
-				result.WriteString("if (!in_array($value, [")
-				for i, val := range values {
-					if i > 0 {
-						result.WriteString(", ")
-					}
-					result.WriteString(formatDefaultValue(val))
-				}
-				result.WriteString("])) {\n")
-				result.WriteString(fmt.Sprintf("    throw new \\InvalidArgumentException('%s');\n", rule.ErrorMessage))
-				result.WriteString("}\n")
-			}
 		case "pattern":
-			if pattern, ok := rule.Value.(string); ok {
-				result.WriteString(fmt.Sprintf("if (!preg_match('/%s/', $value)) {\n",
-					strings.ReplaceAll(pattern, "/", "\\/")))
-				result.WriteString(fmt.Sprintf("    throw new \\InvalidArgumentException('%s');\n", rule.ErrorMessage))
-				result.WriteString("}\n")
-			}
+			result.WriteString(fmt.Sprintf("if (!preg_match('/%s/', $value)) {\n", rule.Value))
+			result.WriteString(fmt.Sprintf("    throw new \\InvalidArgumentException('%s');\n", rule.ErrorMessage))
+			result.WriteString("}\n")
 		case "range":
-			// Add range validation logic
-			result.WriteString("// Range validation would go here\n")
+			// Handle range validation
 		}
 	}
 
@@ -381,12 +233,23 @@ func isValidPHPIdentifier(name string) bool {
 		return false
 	}
 
-	// PHP identifier regex: starts with letter or underscore, followed by letters, digits, or underscores
-	match, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*$`, name)
-	return match
+	// Check first character
+	first := name[0]
+	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
+		return false
+	}
+
+	// Check remaining characters
+	for _, char := range name[1:] {
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '_') {
+			return false
+		}
+	}
+
+	return true
 }
 
-// sanitizePHPIdentifier converts a string to a valid PHP identifier.
 func sanitizePHPIdentifier(name string) string {
 	if name == "" {
 		return "unnamed"
@@ -428,7 +291,7 @@ func sanitizePHPIdentifier(name string) string {
 }
 
 // renderArrayType generates PHP array type handling.
-func renderArrayType(phpType types.PHPType) string {
+func renderArrayType(phpType config.PHPType) string {
 	if !phpType.IsArray || phpType.ArrayItemType == nil {
 		return phpType.Name
 	}
@@ -438,16 +301,16 @@ func renderArrayType(phpType types.PHPType) string {
 }
 
 // hasSpecialCase checks if a model has a specific special case.
-func hasSpecialCase(data interface{}, specialCase types.SpecialCase) bool {
-	var model *types.SchemaModel
+func hasSpecialCase(data interface{}, specialCase config.SpecialCase) bool {
+	var model *config.SchemaModel
 
 	// Handle both direct SchemaModel and wrapped struct
 	switch v := data.(type) {
-	case *types.SchemaModel:
+	case *config.SchemaModel:
 		model = v
 	case struct {
-		*types.SchemaModel
-		Config *types.GeneratorConfig
+		*config.SchemaModel
+		Config *config.GeneratorConfig
 	}:
 		model = v.SchemaModel
 	default:
@@ -463,20 +326,20 @@ func hasSpecialCase(data interface{}, specialCase types.SpecialCase) bool {
 }
 
 // getHTTPClientImports returns import statements for the specified HTTP client.
-func getHTTPClientImports(clientType types.HTTPClientType) []string {
+func getHTTPClientImports(clientType config.HTTPClientType) []string {
 	switch clientType {
-	case types.GuzzleClient:
+	case config.GuzzleClient:
 		return []string{
 			"GuzzleHttp\\Client",
 			"GuzzleHttp\\Exception\\GuzzleException",
 			"GuzzleHttp\\RequestOptions",
 		}
-	case types.LaravelClient:
+	case config.LaravelClient:
 		return []string{
 			"Illuminate\\Http\\Client\\Factory as HttpFactory",
 			"Illuminate\\Http\\Client\\Response",
 		}
-	case types.CurlClient:
+	case config.CurlClient:
 		return []string{} // cURL doesn't need imports
 	default:
 		return []string{}

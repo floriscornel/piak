@@ -2,7 +2,11 @@ package templates
 
 import (
 	"embed"
+	"strings"
 	"text/template"
+
+	"github.com/iancoleman/strcase"
+	"github.com/jinzhu/inflection"
 )
 
 //go:embed *.tmpl
@@ -12,19 +16,19 @@ var TemplateFS embed.FS
 func GetTemplates() (*template.Template, error) {
 	funcMap := template.FuncMap{
 		// Basic string functions
-		"toCamel":          toCamel,
-		"toSnake":          toSnake,
-		"toLower":          toLower,
-		"toUpper":          toUpper,
-		"toScreamingSnake": toScreamingSnake,
-		"pluralize":        pluralize,
-		"singularize":      singularize,
-		"join":             join,
-		"hasPrefix":        hasPrefix,
-		"hasSuffix":        hasSuffix,
-		"trimSpace":        trimSpace,
-		"sub":              sub,
-		"add":              add,
+		"toCamel":          strcase.ToCamel,
+		"toSnake":          strcase.ToSnake,
+		"toLower":          strings.ToLower,
+		"toUpper":          strings.ToUpper,
+		"toScreamingSnake": strcase.ToScreamingSnake,
+		"pluralize":        inflection.Plural,
+		"singularize":      inflection.Singular,
+		"join":             strings.Join,
+		"hasPrefix":        strings.HasPrefix,
+		"hasSuffix":        strings.HasSuffix,
+		"trimSpace":        strings.TrimSpace,
+		"sub":              func(a, b int) int { return a - b },
+		"add":              func(a, b int) int { return a + b },
 
 		// PHP-specific type formatting
 		"formatPHPType":          formatPHPType,

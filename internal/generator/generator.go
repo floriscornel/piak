@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/floriscornel/piak/internal/analyzer"
+	"github.com/floriscornel/piak/internal/config"
 	"github.com/floriscornel/piak/internal/parser"
-	"github.com/floriscornel/piak/internal/types"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
@@ -13,13 +13,13 @@ const arrayType = "array"
 
 // Generator coordinates the entire generation process.
 type Generator struct {
-	config *types.GeneratorConfig
+	config *config.GeneratorConfig
 	parser *parser.OpenAPIParser
 	phpGen *PHPGenerator
 }
 
 // NewGenerator creates a new Generator instance.
-func NewGenerator(cfg *types.GeneratorConfig) (*Generator, error) {
+func NewGenerator(cfg *config.GeneratorConfig) (*Generator, error) {
 	phpGen, err := NewPHPGenerator(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PHP generator: %w", err)
@@ -62,9 +62,9 @@ func (g *Generator) Generate() error {
 	}
 
 	// Convert to new types format
-	schemaModels := make(map[string]*types.SchemaModel)
+	schemaModels := make(map[string]*config.SchemaModel)
 	for name, schema := range schemas {
-		schemaModel := &types.SchemaModel{
+		schemaModel := &config.SchemaModel{
 			Name:         name,
 			PHPType:      name, // TODO: Apply proper PHP naming conventions
 			OriginalName: name,
@@ -77,8 +77,8 @@ func (g *Generator) Generate() error {
 	}
 
 	// Create internal model
-	internalModel := &types.InternalModel{
-		Info: &types.InfoModel{
+	internalModel := &config.InternalModel{
+		Info: &config.InfoModel{
 			Title:       spec.Info.Title,
 			Version:     spec.Info.Version,
 			Description: spec.Info.Description,
@@ -104,8 +104,8 @@ func (g *Generator) Generate() error {
 }
 
 // Helper function to convert old properties to new format.
-func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []string) []*types.Property {
-	var properties []*types.Property
+func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []string) []*config.Property {
+	var properties []*config.Property
 
 	// Create a map for quick required field lookup
 	requiredMap := make(map[string]bool)
@@ -117,7 +117,7 @@ func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []strin
 		if propRef.Value != nil {
 			isRequired := requiredMap[name]
 
-			phpType := types.PHPType{
+			phpType := config.PHPType{
 				Name:       mapOpenAPITypeToPHP(propRef.Value),
 				IsNullable: !isRequired, // Required fields are not nullable
 				DocComment: mapOpenAPITypeToPHP(propRef.Value),
@@ -127,14 +127,14 @@ func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []strin
 			if phpType.Name == "array" && propRef.Value.Items != nil {
 				itemType := mapOpenAPITypeToPHP(propRef.Value.Items.Value)
 				phpType.IsArray = true
-				phpType.ArrayItemType = &types.PHPType{
+				phpType.ArrayItemType = &config.PHPType{
 					Name:       itemType,
 					IsNullable: false,
 					DocComment: itemType,
 				}
 			}
 
-			prop := &types.Property{
+			prop := &config.Property{
 				Name:        name,
 				PHPType:     phpType,
 				OpenAPIType: propRef.Value,
