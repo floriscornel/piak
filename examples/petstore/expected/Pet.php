@@ -20,50 +20,55 @@ readonly class Pet
      */
     public static function fromArray(array $data): self
     {
-        if (! isset($data['name']) || ! is_string($data['name'])) {
+        // Required fields with validation
+        $name = $data['name'] ?? throw new \InvalidArgumentException('Pet name is required');
+        if (! is_string($name)) {
             throw new \InvalidArgumentException('Pet name must be a string');
         }
-        if (! isset($data['photoUrls']) || ! is_array($data['photoUrls'])) {
+
+        $photoUrls = $data['photoUrls'] ?? throw new \InvalidArgumentException('Pet photoUrls is required');
+        if (! is_array($photoUrls)) {
             throw new \InvalidArgumentException('Pet photoUrls must be an array');
         }
 
-        // Process photoUrls array
-        $photoUrls = [];
-        foreach ($data['photoUrls'] as $url) {
-            if (! is_string($url)) {
-                throw new \InvalidArgumentException('PhotoUrl must be a string');
-            }
-            $photoUrls[] = $url;
-        }
+        // Validate and process photo URLs
+        $validatedPhotoUrls = array_map(
+            static fn (mixed $url): string => is_string($url)
+                ? $url
+                : throw new \InvalidArgumentException('PhotoUrl must be a string'),
+            $photoUrls
+        );
 
-        // Process category if present
-        $category = null;
-        if (isset($data['category']) && is_array($data['category'])) {
-            /** @var array<string, mixed> $categoryData */
-            $categoryData = $data['category'];
-            $category = Category::fromArray($categoryData);
-        }
+        // Optional fields with safe processing
+        $id = match (true) {
+            ! isset($data['id']) => null,
+            is_int($data['id']) => $data['id'],
+            is_numeric($data['id']) => (int) $data['id'],
+            default => null,
+        };
 
-        // Process tags array if present
-        $tags = [];
-        if (isset($data['tags']) && is_array($data['tags'])) {
-            foreach ($data['tags'] as $tagData) {
-                if (! is_array($tagData)) {
-                    throw new \InvalidArgumentException('Tag data must be an array');
-                }
-                /** @var array<string, mixed> $tagDataTyped */
-                $tagDataTyped = $tagData;
-                $tags[] = Tag::fromArray($tagDataTyped);
-            }
-        }
+        $category = isset($data['category']) && is_array($data['category'])
+            ? Category::fromArray($data['category'])
+            : null;
+
+        $tags = isset($data['tags']) && is_array($data['tags'])
+            ? array_map(
+                static fn (mixed $tagData): Tag => is_array($tagData)
+                    ? Tag::fromArray($tagData)
+                    : throw new \InvalidArgumentException('Tag data must be an array'),
+                $data['tags']
+            )
+            : [];
+
+        $status = isset($data['status']) && is_string($data['status']) ? $data['status'] : null;
 
         return new self(
-            name: $data['name'],
-            photoUrls: $photoUrls,
-            id: isset($data['id']) && (is_int($data['id']) || is_numeric($data['id'])) ? (int) $data['id'] : null,
+            name: $name,
+            photoUrls: $validatedPhotoUrls,
+            id: $id,
             category: $category,
             tags: $tags,
-            status: isset($data['status']) && is_string($data['status']) ? $data['status'] : null
+            status: $status
         );
     }
 }
