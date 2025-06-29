@@ -20,7 +20,6 @@ readonly class Pet
      */
     public static function fromArray(array $data): self
     {
-        // Required fields with validation
         $name = $data['name'] ?? throw new \InvalidArgumentException('Pet name is required');
         if (! is_string($name)) {
             throw new \InvalidArgumentException('Pet name must be a string');
@@ -31,7 +30,6 @@ readonly class Pet
             throw new \InvalidArgumentException('Pet photoUrls must be an array');
         }
 
-        // Validate and process photo URLs
         $validatedPhotoUrls = array_map(
             static fn (mixed $url): string => is_string($url)
                 ? $url
@@ -39,7 +37,6 @@ readonly class Pet
             $photoUrls
         );
 
-        // Optional fields with safe processing
         $id = match (true) {
             ! isset($data['id']) => null,
             is_int($data['id']) => $data['id'],
