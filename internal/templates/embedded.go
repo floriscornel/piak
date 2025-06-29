@@ -9,26 +9,39 @@ import (
 	"github.com/jinzhu/inflection"
 )
 
-//go:embed *.tmpl
+//go:embed *.tmpl partials/*.tmpl
 var TemplateFS embed.FS
 
 // GetTemplates returns all embedded templates with custom functions.
 func GetTemplates() (*template.Template, error) {
 	funcMap := template.FuncMap{
 		// Basic string functions
-		"toCamel":          strcase.ToCamel,
+		"toCamel": strcase.ToCamel,
+		"toCamelCase": func(s string) string {
+			camel := strcase.ToCamel(s)
+			if camel == "" {
+				return camel
+			}
+			return strings.ToLower(camel[:1]) + camel[1:]
+		},
 		"toSnake":          strcase.ToSnake,
 		"toLower":          strings.ToLower,
 		"toUpper":          strings.ToUpper,
 		"toScreamingSnake": strcase.ToScreamingSnake,
-		"pluralize":        inflection.Plural,
-		"singularize":      inflection.Singular,
-		"join":             strings.Join,
-		"hasPrefix":        strings.HasPrefix,
-		"hasSuffix":        strings.HasSuffix,
-		"trimSpace":        strings.TrimSpace,
-		"sub":              func(a, b int) int { return a - b },
-		"add":              func(a, b int) int { return a + b },
+		"capitalize": func(s string) string {
+			if s == "" {
+				return s
+			}
+			return strings.ToUpper(s[:1]) + s[1:]
+		},
+		"pluralize":   inflection.Plural,
+		"singularize": inflection.Singular,
+		"join":        strings.Join,
+		"hasPrefix":   strings.HasPrefix,
+		"hasSuffix":   strings.HasSuffix,
+		"trimSpace":   strings.TrimSpace,
+		"sub":         func(a, b int) int { return a - b },
+		"add":         func(a, b int) int { return a + b },
 
 		// PHP-specific type formatting
 		"formatPHPType":          formatPHPType,
@@ -58,7 +71,7 @@ func GetTemplates() (*template.Template, error) {
 	tmpl := template.New("").Funcs(funcMap)
 
 	// Try to parse templates, return empty template if none exist
-	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl")
+	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl", "partials/*.tmpl")
 	if err != nil {
 		// Return just the base template with functions if no .tmpl files exist
 		return tmpl, err

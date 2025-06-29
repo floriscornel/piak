@@ -1,0 +1,129 @@
+{{- define "fromArrayMethod" -}}
+
+    /**
+     * Create instance from array data
+     * @param array<string, mixed> $data
+     * @return self
+     * @throws \InvalidArgumentException
+     */
+    public static function fromArray(array $data): self
+    {
+{{- template "fromArrayValidation" . }}
+
+        return new self(
+{{- range $index, $prop := .Properties }}
+            {{ $prop.Name }}: {{ template "fromArrayPropertyAssignment" $prop }}{{ if ne $index (sub (len $.Properties) 1) }},{{ end }}
+{{- end }}
+        );
+    }
+{{- end -}}
+
+{{- define "fromArrayValidation" -}}
+{{- range .Properties }}
+{{- if .Required }}
+        // Required fields with validation
+        ${{ .Name }} = $data['{{ .Name }}'] ?? throw new \InvalidArgumentException('{{ $.Name }} {{ .Name }} is required');
+{{- template "fromArrayTypeValidation" . }}
+
+{{- else }}
+        // Optional fields with safe processing
+{{- template "fromArrayOptionalProcessing" . }}
+
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "fromArrayTypeValidation" -}}
+{{- if eq .PHPType.Name "string" }}
+        if (!is_string(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ $.Name }} {{ .Name }} must be a string');
+        }
+{{- else if eq .PHPType.Name "int" }}
+        if (!is_int(${{ .Name }}) && !is_numeric(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ $.Name }} {{ .Name }} must be an integer');
+        }
+        ${{ .Name }} = (int) ${{ .Name }};
+{{- else if eq .PHPType.Name "bool" }}
+        if (!is_bool(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ $.Name }} {{ .Name }} must be a boolean');
+        }
+{{- else if .PHPType.IsArray }}
+        if (!is_array(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ $.Name }} {{ .Name }} must be an array');
+        }
+{{- template "fromArrayArrayValidation" . }}
+{{- end }}
+{{- end -}}
+
+{{- define "fromArrayArrayValidation" -}}
+
+        // Validate and process {{ .Name }} array
+{{- if .PHPType.ArrayItemType }}
+{{- if eq .PHPType.ArrayItemType.Name "string" }}
+        $validated{{ .Name | capitalize }} = array_map(
+            static fn(mixed ${{ .Name | singularize }}): string => is_string(${{ .Name | singularize }}) 
+                ? ${{ .Name | singularize }} 
+                : throw new \InvalidArgumentException('{{ .Name | singularize }} must be a string'),
+            ${{ .Name }}
+        );
+{{- else if ne .PHPType.ArrayItemType.Name "mixed" }}
+        $validated{{ .Name | capitalize }} = array_map(
+            static fn(mixed ${{ .Name | singularize }}Data): {{ .PHPType.ArrayItemType.Name }} => is_array(${{ .Name | singularize }}Data)
+                ? {{ .PHPType.ArrayItemType.Name }}::fromArray(${{ .Name | singularize }}Data)
+                : throw new \InvalidArgumentException('{{ .Name | singularize }} data must be an array'),
+            ${{ .Name }}
+        );
+{{- else }}
+        $validated{{ .Name | capitalize }} = ${{ .Name }};
+{{- end }}
+{{- else }}
+        $validated{{ .Name | capitalize }} = ${{ .Name }};
+{{- end }}
+{{- end -}}
+
+{{- define "fromArrayOptionalProcessing" -}}
+{{- if eq .PHPType.Name "int" }}
+        ${{ .Name }} = match (true) {
+            !isset($data['{{ .Name }}']) => null,
+            is_int($data['{{ .Name }}']) => $data['{{ .Name }}'],
+            is_numeric($data['{{ .Name }}']) => (int) $data['{{ .Name }}'],
+            default => null,
+        };
+{{- else if eq .PHPType.Name "string" }}
+        ${{ .Name }} = isset($data['{{ .Name }}']) && is_string($data['{{ .Name }}']) ? $data['{{ .Name }}'] : null;
+{{- else if eq .PHPType.Name "bool" }}
+        ${{ .Name }} = isset($data['{{ .Name }}']) && is_bool($data['{{ .Name }}']) ? $data['{{ .Name }}'] : null;
+{{- else if .PHPType.IsArray }}
+        ${{ .Name }} = isset($data['{{ .Name }}']) && is_array($data['{{ .Name }}'])
+{{- if .PHPType.ArrayItemType }}
+{{- if eq .PHPType.ArrayItemType.Name "string" }}
+            ? array_map(
+                static fn(mixed ${{ .Name | singularize }}): string => is_string(${{ .Name | singularize }}) 
+                    ? ${{ .Name | singularize }} 
+                    : throw new \InvalidArgumentException('{{ .Name | singularize }} must be a string'),
+                $data['{{ .Name }}']
+            )
+{{- else if ne .PHPType.ArrayItemType.Name "mixed" }}
+            ? array_map(
+                static fn(mixed ${{ .Name | singularize }}Data): {{ .PHPType.ArrayItemType.Name }} => is_array(${{ .Name | singularize }}Data)
+                    ? {{ .PHPType.ArrayItemType.Name }}::fromArray(${{ .Name | singularize }}Data)
+                    : throw new \InvalidArgumentException('{{ .Name | singularize }} data must be an array'),
+                $data['{{ .Name }}']
+            )
+{{- else }}
+            ? $data['{{ .Name }}']
+{{- end }}
+{{- else }}
+            ? $data['{{ .Name }}']
+{{- end }}
+            : [];
+{{- else }}
+        ${{ .Name }} = isset($data['{{ .Name }}']) && is_array($data['{{ .Name }}'])
+            ? {{ .PHPType.Name }}::fromArray($data['{{ .Name }}'])
+            : null;
+{{- end }}
+{{- end -}}
+
+{{- define "fromArrayPropertyAssignment" -}}
+{{ if and .Required .PHPType.IsArray }}$validated{{ .Name | capitalize }}{{ else }}${{ .Name }}{{ end }}
+{{- end -}} 

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/floriscornel/piak/internal/analyzer"
 	"github.com/floriscornel/piak/internal/config"
@@ -117,15 +118,29 @@ func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []strin
 		if propRef.Value != nil {
 			isRequired := requiredMap[name]
 
+			// Handle schema references first
+			var typeName string
+			if propRef.Ref != "" {
+				// Extract schema name from reference
+				parts := strings.Split(propRef.Ref, "/")
+				if len(parts) > 0 {
+					typeName = parts[len(parts)-1]
+				} else {
+					typeName = "mixed"
+				}
+			} else {
+				typeName = mapOpenAPITypeToPHP(propRef.Value)
+			}
+
 			phpType := config.PHPType{
-				Name:       mapOpenAPITypeToPHP(propRef.Value),
+				Name:       typeName,
 				IsNullable: !isRequired, // Required fields are not nullable
-				DocComment: mapOpenAPITypeToPHP(propRef.Value),
+				DocComment: typeName,
 			}
 
 			// Handle array types with proper item type detection
 			if phpType.Name == "array" && propRef.Value.Items != nil {
-				itemType := mapOpenAPITypeToPHP(propRef.Value.Items.Value)
+				itemType := resolveArrayItemType(propRef.Value.Items)
 				phpType.IsArray = true
 				phpType.ArrayItemType = &config.PHPType{
 					Name:       itemType,
@@ -171,4 +186,28 @@ func mapOpenAPITypeToPHP(schema *openapi3.Schema) string {
 	default:
 		return "mixed"
 	}
+}
+
+// Helper function to resolve array item types, including schema references.
+func resolveArrayItemType(itemsRef *openapi3.SchemaRef) string {
+	if itemsRef == nil {
+		return "mixed"
+	}
+
+	// Check if it's a reference to a schema
+	if itemsRef.Ref != "" {
+		// Extract the schema name from the reference
+		// Example: "#/components/schemas/Tag" -> "Tag"
+		parts := strings.Split(itemsRef.Ref, "/")
+		if len(parts) > 0 {
+			return parts[len(parts)-1]
+		}
+	}
+
+	// If not a reference, use the regular type mapping
+	if itemsRef.Value != nil {
+		return mapOpenAPITypeToPHP(itemsRef.Value)
+	}
+
+	return "mixed"
 }
