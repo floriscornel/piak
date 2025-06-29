@@ -42,7 +42,7 @@ func init() {
 	generateCmd.Flags().StringVarP(&outputDir, "output", "o", "", "Output directory for generated PHP files (required)")
 	generateCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "PHP namespace for generated classes (required)")
 	generateCmd.Flags().BoolVar(&generateClient, "generate-client", true, "Generate HTTP client code")
-	generateCmd.Flags().BoolVar(&generateTests, "generate-tests", false, "Generate test files")
+	generateCmd.Flags().BoolVar(&generateTests, "generate-tests", true, "Generate test files")
 }
 
 // runGenerate executes the generate command.
