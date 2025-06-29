@@ -4,7 +4,7 @@
 
 # Default input and output settings
 input: "examples/petstore/openapi.yaml"
-output: "./generated"
+output: "examples/petstore/output"
 
 # PHP Generation Settings
 php:
@@ -20,7 +20,7 @@ openapi:
 
 # Output Settings
 output_config:
-  overwrite: false
+  overwrite: true
   create_directories: true
   file_extension: ".php"
 

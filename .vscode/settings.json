@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.php.tmpl": "php",
+        "*.tmpl": "php"
+    }
+}

@@ -11,18 +11,44 @@ var TemplateFS embed.FS
 // GetTemplates returns all embedded templates with custom functions.
 func GetTemplates() (*template.Template, error) {
 	funcMap := template.FuncMap{
-		"toCamel":     toCamel,
-		"toSnake":     toSnake,
-		"toLower":     toLower,
-		"toUpper":     toUpper,
-		"pluralize":   pluralize,
-		"singularize": singularize,
-		"join":        join,
-		"hasPrefix":   hasPrefix,
-		"hasSuffix":   hasSuffix,
-		"trimSpace":   trimSpace,
-		"sub":         sub,
-		"add":         add,
+		// Basic string functions
+		"toCamel":          toCamel,
+		"toSnake":          toSnake,
+		"toLower":          toLower,
+		"toUpper":          toUpper,
+		"toScreamingSnake": toScreamingSnake,
+		"pluralize":        pluralize,
+		"singularize":      singularize,
+		"join":             join,
+		"hasPrefix":        hasPrefix,
+		"hasSuffix":        hasSuffix,
+		"trimSpace":        trimSpace,
+		"sub":              sub,
+		"add":              add,
+
+		// PHP-specific type formatting
+		"formatPHPType":          formatPHPType,
+		"formatPHPDocType":       formatPHPDocType,
+		"formatConstructorParam": formatConstructorParam,
+		"formatDefaultValue":     formatDefaultValue,
+		"renderArrayType":        renderArrayType,
+
+		// Code generation helpers
+		"generateUseStatements":        generateUseStatements,
+		"renderUnionTypeDetection":     renderUnionTypeDetection,
+		"renderDiscriminatorDetection": renderDiscriminatorDetection,
+		"renderHeuristicDetection":     renderHeuristicDetection,
+		"renderFromArrayMethod":        renderFromArrayMethod,
+		"renderPropertyValidation":     renderPropertyValidation,
+
+		// Validation and sanitization
+		"isValidPHPIdentifier":  isValidPHPIdentifier,
+		"sanitizePHPIdentifier": sanitizePHPIdentifier,
+
+		// Utility functions
+		"hasSpecialCase":       hasSpecialCase,
+		"getHTTPClientImports": getHTTPClientImports,
+		"indent":               indent,
 	}
 
 	tmpl := template.New("").Funcs(funcMap)
