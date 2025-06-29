@@ -25,7 +25,7 @@ func NewPHPGenerator(cfg *types.GeneratorConfig) *PHPGenerator {
 // GenerateFromModel generates PHP code from the internal model.
 func (g *PHPGenerator) GenerateFromModel(model *types.InternalModel) error {
 	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(g.config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(g.config.OutputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -60,7 +60,7 @@ func (g *PHPGenerator) generateClass(name string, schema *types.SchemaModel) err
 
 	content := g.generateClassContent(className, schema)
 
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filePath, err)
 	}
 
@@ -74,7 +74,7 @@ func (g *PHPGenerator) generateClient(model *types.InternalModel) error {
 
 	content := g.generateClientContent(model)
 
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		return fmt.Errorf("failed to write client file: %w", err)
 	}
 

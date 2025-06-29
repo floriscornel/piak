@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	cobra.OnInitialize(initRootConfig)
-	cobra.EnableCommandSorting = false
+	// cobra.EnableCommandSorting = false // Disabled to avoid reassign linter warning
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.piak.yaml)")

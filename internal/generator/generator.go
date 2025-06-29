@@ -9,6 +9,8 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
+const arrayType = "array"
+
 // Generator coordinates the entire generation process.
 type Generator struct {
 	config *types.GeneratorConfig
@@ -85,8 +87,8 @@ func (g *Generator) Generate() error {
 		fmt.Printf("🏗️  Generating PHP code to: %s\n", g.config.OutputDir)
 	}
 
-	if err := g.phpGen.GenerateFromModel(internalModel); err != nil {
-		return fmt.Errorf("failed to generate PHP code: %w", err)
+	if genErr := g.phpGen.GenerateFromModel(internalModel); genErr != nil {
+		return fmt.Errorf("failed to generate PHP code: %w", genErr)
 	}
 
 	if g.config.PHP.GenerateDocblocks {
@@ -138,10 +140,10 @@ func mapOpenAPITypeToPHP(schema *openapi3.Schema) string {
 		return "float"
 	case "boolean":
 		return "bool"
-	case "array":
-		return "array"
+	case arrayType:
+		return arrayType
 	case "object":
-		return "array"
+		return arrayType
 	default:
 		return "mixed"
 	}

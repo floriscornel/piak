@@ -1,5 +1,6 @@
 # Build variables
 BINARY_NAME=piak
+BUILD_DIR=./build
 VERSION?=dev
 GIT_COMMIT?=$(shell git rev-parse --short HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -25,12 +26,13 @@ all: check test build
 
 ## build: Build the binary
 build:
-	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) -v ./
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) -v ./
 
 ## clean: Clean build files
 clean:
 	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
+	rm -rf $(BUILD_DIR)
 
 ## test: Run tests
 test:
@@ -75,8 +77,8 @@ install:
 	$(GOBUILD) $(LDFLAGS) -o $(GOPATH)/bin/$(BINARY_NAME) ./
 
 ## run-example: Run with example
-run-example:
-	./$(BINARY_NAME) generate -i examples/petstore/openapi.yaml -o /tmp/piak-test
+run-example: build
+	$(BUILD_DIR)/$(BINARY_NAME) generate -i examples/petstore/openapi.yaml -o /tmp/piak-test
 
 ## help: Show this help message
 help: Makefile

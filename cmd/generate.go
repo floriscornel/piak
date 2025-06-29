@@ -57,7 +57,7 @@ func init() {
 	_ = viper.BindPFlag("generateDocs", generateCmd.Flags().Lookup("generate-docs"))
 }
 
-func runGenerate(cmd *cobra.Command, args []string) error {
+func runGenerate(_ *cobra.Command, _ []string) error {
 	// Build configuration from flags and config file
 	config := &types.GeneratorConfig{
 		HTTPClient:     types.HTTPClientType(httpClient),
@@ -92,7 +92,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 

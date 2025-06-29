@@ -39,8 +39,8 @@ func (p *OpenAPIParser) ParseFile(filePath string) (*openapi3.T, error) {
 	// Validate the specification if requested
 	if p.validateSpec {
 		ctx := context.Background()
-		if err := spec.Validate(ctx); err != nil {
-			return nil, fmt.Errorf("OpenAPI specification validation failed: %w", err)
+		if validationErr := spec.Validate(ctx); validationErr != nil {
+			return nil, fmt.Errorf("OpenAPI specification validation failed: %w", validationErr)
 		}
 	}
 
@@ -58,8 +58,8 @@ func (p *OpenAPIParser) ParseBytes(data []byte) (*openapi3.T, error) {
 	// Validate the specification if requested
 	if p.validateSpec {
 		ctx := context.Background()
-		if err := spec.Validate(ctx); err != nil {
-			return nil, fmt.Errorf("OpenAPI specification validation failed: %w", err)
+		if validationErr := spec.Validate(ctx); validationErr != nil {
+			return nil, fmt.Errorf("OpenAPI specification validation failed: %w", validationErr)
 		}
 	}
 

@@ -18,7 +18,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version information",
 	Long:  "Print the version information for piak",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Printf("piak version: %s\n", version)
 		fmt.Printf("Git commit: %s\n", commit)
 		fmt.Printf("Built: %s\n", date)
