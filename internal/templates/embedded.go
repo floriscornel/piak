@@ -1,0 +1,37 @@
+package templates
+
+import (
+	"embed"
+	"text/template"
+)
+
+//go:embed *.tmpl
+var TemplateFS embed.FS
+
+// GetTemplates returns all embedded templates with custom functions
+func GetTemplates() (*template.Template, error) {
+	funcMap := template.FuncMap{
+		"toCamel":     toCamel,
+		"toSnake":     toSnake,
+		"toLower":     toLower,
+		"toUpper":     toUpper,
+		"pluralize":   pluralize,
+		"singularize": singularize,
+		"join":        join,
+		"hasPrefix":   hasPrefix,
+		"hasSuffix":   hasSuffix,
+		"trimSpace":   trimSpace,
+		"sub":         sub,
+		"add":         add,
+	}
+
+	tmpl := template.New("").Funcs(funcMap)
+
+	// Try to parse templates, return empty template if none exist
+	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl")
+	if err != nil {
+		// Return just the base template with functions if no .tmpl files exist
+		return tmpl, nil
+	}
+	return parsed, nil
+}

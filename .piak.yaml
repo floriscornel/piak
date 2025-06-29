@@ -1,0 +1,27 @@
+# Piak Configuration File
+# Default settings for OpenAPI to PHP generation
+
+# Default input and output settings
+input: ""
+output: "./generated"
+
+# PHP Generation Settings
+php:
+  namespace: "Generated"
+  base_path: "src"
+  use_strict_types: true
+  generate_docblocks: true
+
+# OpenAPI Processing Settings
+openapi:
+  validate_spec: true
+  resolve_refs: true
+
+# Output Settings
+output:
+  overwrite: false
+  create_directories: true
+  file_extension: ".php"
+
+# Logging
+verbose: false 
