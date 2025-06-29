@@ -4,14 +4,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/floriscornel/piak/internal/types"
 	"github.com/spf13/viper"
 )
 
 // Config holds the application configuration.
 type Config struct {
-	Input        string        `mapstructure:"input"`
-	Output       string        `mapstructure:"output"`
+	Input        string        `mapstructure:"input"         validate:"required"`
+	Output       string        `mapstructure:"output"        validate:"required"`
 	Verbose      bool          `mapstructure:"verbose"`
 	PHP          PHPConfig     `mapstructure:"php"`
 	OpenAPI      OpenAPIConfig `mapstructure:"openapi"`
@@ -20,7 +23,7 @@ type Config struct {
 
 // PHPConfig holds PHP-specific generation settings.
 type PHPConfig struct {
-	Namespace         string `mapstructure:"namespace"`
+	Namespace         string `mapstructure:"namespace"          validate:"required"`
 	BasePath          string `mapstructure:"base_path"`
 	UseStrictTypes    bool   `mapstructure:"use_strict_types"`
 	GenerateDocblocks bool   `mapstructure:"generate_docblocks"`
@@ -39,92 +42,288 @@ type OutputConfig struct {
 	FileExtension     string `mapstructure:"file_extension"`
 }
 
-// Load initializes and loads the configuration.
-func Load(configFile string) (*Config, error) {
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-	} else {
-		// Search for config in common locations
-		viper.SetConfigName("piak")
-		viper.SetConfigType("yaml")
-		viper.AddConfigPath(".")
-		viper.AddConfigPath("$HOME/.piak")
-		viper.AddConfigPath("/etc/piak")
-	}
+// GenerateConfig holds generation-specific configuration.
+type GenerateConfig struct {
+	*Config
+	HTTPClient     types.HTTPClientType `mapstructure:"http_client"`
+	StrictTypes    bool                 `mapstructure:"strict_types"`
+	GenerateClient bool                 `mapstructure:"generate_client"`
+	GenerateTests  bool                 `mapstructure:"generate_tests"`
+	DryRun         bool                 `mapstructure:"dry_run"`
+}
 
-	// Set environment variable prefix
-	viper.SetEnvPrefix("PIAK")
-	viper.AutomaticEnv()
+// ValidHTTPClients contains all valid HTTP client types.
+var ValidHTTPClients = []string{
+	string(types.GuzzleClient),
+	string(types.LaravelClient),
+	string(types.CurlClient),
+}
 
-	// Set defaults
-	setDefaults()
+// Loader handles configuration loading and validation.
+type Loader struct {
+	v *viper.Viper
+}
 
-	// Read config file if it exists
-	if err := viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
-		}
+// NewLoader creates a new configuration loader.
+func NewLoader() *Loader {
+	v := viper.New()
+	setDefaults(v)
+	return &Loader{v: v}
+}
+
+// LoadConfig loads and validates the main application config.
+func (l *Loader) LoadConfig(configFile string) (*Config, error) {
+	if err := l.setupViper(configFile); err != nil {
+		return nil, fmt.Errorf("failed to setup configuration: %w", err)
 	}
 
 	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := l.v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	if err := l.validateConfig(&cfg); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	return &cfg, nil
 }
 
-// LoadWithGlobalConfig initializes the global config (for root command).
-func LoadWithGlobalConfig(configFile string) error {
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-	} else {
-		// Find home directory
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-
-		// Search config in home directory with name ".piak" (without extension)
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(".")
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".piak")
+// LoadGenerateConfig loads and validates the generate command config.
+func (l *Loader) LoadGenerateConfig(configFile string) (*GenerateConfig, error) {
+	baseConfig, err := l.LoadConfig(configFile)
+	if err != nil {
+		return nil, err
 	}
 
-	viper.SetEnvPrefix("PIAK")
-	viper.AutomaticEnv()
+	var genConfig GenerateConfig
+	genConfig.Config = baseConfig
 
-	// Set defaults
-	setDefaults()
+	// Unmarshal generate-specific settings
+	if unmarshalErr := l.v.Unmarshal(&genConfig); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal generate config: %w", unmarshalErr)
+	}
 
-	// If a config file is found, read it in
-	if err := viper.ReadInConfig(); err != nil {
+	if validationErr := l.validateGenerateConfig(&genConfig); validationErr != nil {
+		return nil, fmt.Errorf("generate config validation failed: %w", validationErr)
+	}
+
+	return &genConfig, nil
+}
+
+// BindFlags binds command-line flags to the viper instance.
+func (l *Loader) BindFlags(flags map[string]interface{}) error {
+	for key, value := range flags {
+		l.v.Set(key, value)
+	}
+	return nil
+}
+
+// setupViper configures the viper instance for loading config files.
+func (l *Loader) setupViper(configFile string) error {
+	if configFile != "" {
+		if err := l.setupSpecificConfigFile(configFile); err != nil {
+			return err
+		}
+	} else {
+		if err := l.setupDefaultConfigPaths(); err != nil {
+			return err
+		}
+	}
+
+	// Set environment variable prefix
+	l.v.SetEnvPrefix("PIAK")
+	l.v.AutomaticEnv()
+
+	// Replace dots with underscores in env vars
+	l.v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Read config file if it exists
+	if err := l.v.ReadInConfig(); err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
+		if !errors.As(err, &configFileNotFoundError) {
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
+		// Config file not found is OK, we'll use defaults
 	}
 
 	return nil
 }
 
-func setDefaults() {
-	viper.SetDefault("output", "./generated")
-	viper.SetDefault("verbose", false)
-	viper.SetDefault("php.namespace", "Generated")
-	viper.SetDefault("php.base_path", "src")
-	viper.SetDefault("php.use_strict_types", true)
-	viper.SetDefault("php.generate_docblocks", true)
-	viper.SetDefault("openapi.validate_spec", true)
-	viper.SetDefault("openapi.resolve_refs", true)
-	viper.SetDefault("output_config.overwrite", false)
-	viper.SetDefault("output_config.create_directories", true)
-	viper.SetDefault("output_config.file_extension", ".php")
+// setupSpecificConfigFile configures viper for a specific config file.
+func (l *Loader) setupSpecificConfigFile(configFile string) error {
+	// Use specific config file
+	if !filepath.IsAbs(configFile) {
+		abs, err := filepath.Abs(configFile)
+		if err != nil {
+			return fmt.Errorf("failed to resolve config file path: %w", err)
+		}
+		configFile = abs
+	}
+	l.v.SetConfigFile(configFile)
+	return nil
+}
+
+// setupDefaultConfigPaths configures viper to search in default locations.
+func (l *Loader) setupDefaultConfigPaths() error {
+	// Search for config in standard locations
+	l.v.SetConfigName("piak")
+	l.v.SetConfigType("yaml")
+	l.v.AddConfigPath(".")
+
+	if home, err := os.UserHomeDir(); err == nil {
+		l.v.AddConfigPath(filepath.Join(home, ".piak"))
+	}
+
+	l.v.AddConfigPath("/etc/piak")
+	return nil
+}
+
+// validateConfig validates the base configuration.
+func (l *Loader) validateConfig(cfg *Config) error {
+	var errs []string
+
+	// Validate output directory
+	if cfg.Output == "" {
+		errs = append(errs, "output directory cannot be empty")
+	}
+
+	// Validate PHP namespace
+	if cfg.PHP.Namespace == "" {
+		errs = append(errs, "PHP namespace cannot be empty")
+	} else if !isValidPHPNamespace(cfg.PHP.Namespace) {
+		errs = append(errs, fmt.Sprintf("invalid PHP namespace: %s", cfg.PHP.Namespace))
+	}
+
+	// Validate file extension
+	if cfg.OutputConfig.FileExtension != "" &&
+		!strings.HasPrefix(cfg.OutputConfig.FileExtension, ".") {
+		errs = append(errs, "file extension must start with a dot")
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("validation errors:\n  - %s", strings.Join(errs, "\n  - "))
+	}
+
+	return nil
+}
+
+// validateGenerateConfig validates the generate command configuration.
+func (l *Loader) validateGenerateConfig(cfg *GenerateConfig) error {
+	var errs []string
+
+	// Validate input file
+	if cfg.Input == "" {
+		errs = append(errs, "input file is required")
+	} else if _, err := os.Stat(cfg.Input); os.IsNotExist(err) {
+		errs = append(errs, fmt.Sprintf("input file does not exist: %s", cfg.Input))
+	}
+
+	// Validate HTTP client
+	if !isValidHTTPClient(string(cfg.HTTPClient)) {
+		errs = append(errs, fmt.Sprintf("invalid HTTP client '%s', valid options: %s",
+			cfg.HTTPClient, strings.Join(ValidHTTPClients, ", ")))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("validation errors:\n  - %s", strings.Join(errs, "\n  - "))
+	}
+
+	return nil
+}
+
+// ToGeneratorConfig converts the generate config to a generator config.
+func (cfg *GenerateConfig) ToGeneratorConfig() *types.GeneratorConfig {
+	return &types.GeneratorConfig{
+		InputFile:      cfg.Input,
+		OutputDir:      cfg.Output,
+		HTTPClient:     cfg.HTTPClient,
+		Namespace:      cfg.PHP.Namespace,
+		StrictTypes:    cfg.StrictTypes,
+		GenerateTests:  cfg.GenerateTests,
+		GenerateClient: cfg.GenerateClient,
+		Overwrite:      cfg.OutputConfig.Overwrite,
+		PHP: types.PHPConfig{
+			Namespace:         cfg.PHP.Namespace,
+			BasePath:          cfg.PHP.BasePath,
+			UseStrictTypes:    cfg.PHP.UseStrictTypes,
+			GenerateDocblocks: cfg.PHP.GenerateDocblocks,
+			FileExtension:     cfg.OutputConfig.FileExtension,
+		},
+		OpenAPI: types.OpenAPIConfig{
+			ValidateSpec: cfg.OpenAPI.ValidateSpec,
+			ResolveRefs:  cfg.OpenAPI.ResolveRefs,
+		},
+	}
+}
+
+// setDefaults sets default configuration values.
+func setDefaults(v *viper.Viper) {
+	// Base defaults
+	v.SetDefault("output", "./generated")
+	v.SetDefault("verbose", false)
+
+	// PHP defaults
+	v.SetDefault("php.namespace", "Generated")
+	v.SetDefault("php.base_path", "src")
+	v.SetDefault("php.use_strict_types", true)
+	v.SetDefault("php.generate_docblocks", true)
+
+	// OpenAPI defaults
+	v.SetDefault("openapi.validate_spec", true)
+	v.SetDefault("openapi.resolve_refs", true)
+
+	// Output defaults
+	v.SetDefault("output_config.overwrite", false)
+	v.SetDefault("output_config.create_directories", true)
+	v.SetDefault("output_config.file_extension", ".php")
+
+	// Generate defaults
+	v.SetDefault("http_client", string(types.GuzzleClient))
+	v.SetDefault("strict_types", true)
+	v.SetDefault("generate_client", true)
+	v.SetDefault("generate_tests", false)
+	v.SetDefault("dry_run", false)
+}
+
+// isValidHTTPClient checks if the HTTP client type is valid.
+func isValidHTTPClient(client string) bool {
+	for _, valid := range ValidHTTPClients {
+		if client == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// isValidPHPNamespace checks if the PHP namespace is valid.
+func isValidPHPNamespace(namespace string) bool {
+	if namespace == "" {
+		return false
+	}
+
+	// Basic validation - could be more comprehensive
+	parts := strings.Split(namespace, "\\")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			return false
+		}
+		// Check if part starts with a letter or underscore
+		if len(part) == 0 || (!isLetter(rune(part[0])) && part[0] != '_') {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isLetter checks if a rune is a letter.
+func isLetter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }
 
 // GetConfigFileUsed returns the config file that was used.
-func GetConfigFileUsed() string {
-	return viper.ConfigFileUsed()
+func (l *Loader) GetConfigFileUsed() string {
+	return l.v.ConfigFileUsed()
 }

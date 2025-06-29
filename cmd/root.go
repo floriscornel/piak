@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const banner = `       .__        __    
@@ -24,52 +23,56 @@ var rootCmd = &cobra.Command{
 	Use:   "piak",
 	Short: "A tool to convert OpenAPI specifications to PHP code",
 	Long:  banner + "\n\npiak is a tool to convert OpenAPI specifications to PHP code.",
+	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		// Initialize global configuration for all subcommands
+		if err := initGlobalConfig(); err != nil {
+			return fmt.Errorf("failed to initialize configuration: %w", err)
+		}
+		return nil
+	},
 }
 
 func init() {
-	cobra.OnInitialize(initRootConfig)
-	// cobra.EnableCommandSorting = false // Disabled to avoid reassign linter warning
-
-	// Global flags
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.piak.yaml)")
+	// Global flags available to all commands
+	rootCmd.PersistentFlags().
+		StringVar(&cfgFile, "config", "", "config file (default is $HOME/.piak.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-
-	// Bind global flags to viper
-	_ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
 	// Add commands
 	rootCmd.AddCommand(generateCmd)
 	rootCmd.AddCommand(versionCmd)
 }
 
-func initRootConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".piak" (without extension)
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(".")
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".piak")
+// initGlobalConfig initializes the global configuration that's shared across commands.
+func initGlobalConfig() error {
+	// Set verbose flag in a way that subcommands can access it
+	if verbose {
+		fmt.Fprintf(os.Stderr, "🔧 Verbose mode enabled\n")
 	}
 
-	viper.SetEnvPrefix("PIAK")
-	viper.AutomaticEnv() // read in environment variables that match
+	// Validate config file exists if specified
+	if cfgFile != "" {
+		if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
+			return fmt.Errorf("config file does not exist: %s", cfgFile)
+		}
 
-	// If a config file is found, read it in
-	if err := viper.ReadInConfig(); err == nil && verbose {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		if verbose {
+			fmt.Fprintf(os.Stderr, "📄 Using config file: %s\n", cfgFile)
+		}
+	}
+
+	return nil
+}
+
+// Execute is the main entry point for the CLI application.
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 }
 
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+// GetGlobalFlags returns the global flag values for use by subcommands.
+func GetGlobalFlags() (string, bool) {
+	return cfgFile, verbose
 }

@@ -292,7 +292,13 @@ func (g *PHPGenerator) generateAccessors(content *strings.Builder, prop *types.P
 		paramType = "?" + paramType
 	}
 
-	fmt.Fprintf(content, "\n    public function set%s(%s $%s): self\n", methodName, paramType, propName)
+	fmt.Fprintf(
+		content,
+		"\n    public function set%s(%s $%s): self\n",
+		methodName,
+		paramType,
+		propName,
+	)
 	content.WriteString("    {\n")
 	fmt.Fprintf(content, "        $this->%s = $%s;\n", propName, propName)
 	content.WriteString("        return $this;\n")
