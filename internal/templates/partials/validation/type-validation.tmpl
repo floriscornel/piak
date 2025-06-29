@@ -1,0 +1,36 @@
+{{- define "typeValidation" -}}
+{{- if eq .PHPType.Name "string" }}
+{{- template "stringValidation" . }}
+{{- else if eq .PHPType.Name "int" }}
+{{- template "intValidation" . }}
+{{- else if eq .PHPType.Name "bool" }}
+{{- template "boolValidation" . }}
+{{- else if .PHPType.IsArray }}
+{{- template "basicArrayValidation" . }}
+{{- end }}
+{{- end -}}
+
+{{- define "stringValidation" -}}
+        if (!is_string(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ .Name }} must be a string');
+        }
+{{- end -}}
+
+{{- define "intValidation" -}}
+        if (!is_int(${{ .Name }}) && !is_numeric(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ .Name }} must be an integer');
+        }
+        ${{ .Name }} = (int) ${{ .Name }};
+{{- end -}}
+
+{{- define "boolValidation" -}}
+        if (!is_bool(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ .Name }} must be a boolean');
+        }
+{{- end -}}
+
+{{- define "basicArrayValidation" -}}
+        if (!is_array(${{ .Name }})) {
+            throw new \InvalidArgumentException('{{ .Name }} must be an array');
+        }
+{{- end -}} 

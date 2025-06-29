@@ -9,7 +9,7 @@ import (
 	"github.com/jinzhu/inflection"
 )
 
-//go:embed *.tmpl partials/*.tmpl
+//go:embed *.tmpl partials/**/*.tmpl
 var TemplateFS embed.FS
 
 // GetTemplates returns all embedded templates with custom functions.
@@ -71,7 +71,7 @@ func GetTemplates() (*template.Template, error) {
 	tmpl := template.New("").Funcs(funcMap)
 
 	// Try to parse templates, return empty template if none exist
-	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl", "partials/*.tmpl")
+	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl", "partials/**/*.tmpl")
 	if err != nil {
 		// Return just the base template with functions if no .tmpl files exist
 		return tmpl, err

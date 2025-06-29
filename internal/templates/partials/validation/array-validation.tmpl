@@ -1,0 +1,37 @@
+{{- define "arrayValidation" -}}
+
+        // Validate array items: {{ .Name }}
+{{- if .PHPType.ArrayItemType }}
+{{- if eq .PHPType.ArrayItemType.Name "string" }}
+{{- template "stringArrayValidation" . }}
+{{- else if ne .PHPType.ArrayItemType.Name "mixed" }}
+{{- template "objectArrayValidation" . }}
+{{- else }}
+{{- template "mixedArrayValidation" . }}
+{{- end }}
+{{- else }}
+{{- template "mixedArrayValidation" . }}
+{{- end }}
+{{- end -}}
+
+{{- define "stringArrayValidation" -}}
+        $validated{{ .Name | capitalize }} = array_map(
+            static fn(mixed ${{ .Name | singularize }}): string => is_string(${{ .Name | singularize }}) 
+                ? ${{ .Name | singularize }} 
+                : throw new \InvalidArgumentException('{{ .Name | singularize }} must be a string'),
+            ${{ .Name }}
+        );
+{{- end -}}
+
+{{- define "objectArrayValidation" -}}
+        $validated{{ .Name | capitalize }} = array_map(
+            static fn(mixed ${{ .Name | singularize }}Data): {{ .PHPType.ArrayItemType.Name }} => is_array(${{ .Name | singularize }}Data)
+                ? {{ .PHPType.ArrayItemType.Name }}::fromArray(${{ .Name | singularize }}Data)
+                : throw new \InvalidArgumentException('{{ .Name | singularize }} data must be an array'),
+            ${{ .Name }}
+        );
+{{- end -}}
+
+{{- define "mixedArrayValidation" -}}
+        $validated{{ .Name | capitalize }} = ${{ .Name }};
+{{- end -}} 

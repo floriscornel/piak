@@ -1,0 +1,15 @@
+{{- define "optionalFieldProcessing" -}}
+        // Optional field: {{ .Name }}
+{{- if eq .PHPType.Name "int" }}
+{{- template "optionalIntProcessing" . }}
+{{- else if eq .PHPType.Name "string" }}
+{{- template "optionalStringProcessing" . }}
+{{- else if eq .PHPType.Name "bool" }}
+{{- template "optionalBoolProcessing" . }}
+{{- else if .PHPType.IsArray }}
+{{- template "optionalArrayProcessing" . }}
+{{- else }}
+{{- template "optionalObjectProcessing" . }}
+{{- end }}
+
+{{- end -}} 
