@@ -8,7 +8,7 @@ import (
 //go:embed *.tmpl
 var TemplateFS embed.FS
 
-// GetTemplates returns all embedded templates with custom functions
+// GetTemplates returns all embedded templates with custom functions.
 func GetTemplates() (*template.Template, error) {
 	funcMap := template.FuncMap{
 		"toCamel":     toCamel,
@@ -31,7 +31,7 @@ func GetTemplates() (*template.Template, error) {
 	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl")
 	if err != nil {
 		// Return just the base template with functions if no .tmpl files exist
-		return tmpl, nil
+		return tmpl, err
 	}
 	return parsed, nil
 }

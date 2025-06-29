@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	// These will be set by build flags
+	// These will be set by build flags.
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"

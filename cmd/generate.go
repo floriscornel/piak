@@ -45,16 +45,16 @@ func init() {
 	generateCmd.Flags().BoolVar(&generateDocs, "generate-docs", true, "Generate PHPDoc comments")
 
 	// Mark input as required
-	generateCmd.MarkFlagRequired("input")
+	_ = generateCmd.MarkFlagRequired("input")
 
 	// Bind flags to viper
-	viper.BindPFlag("input", generateCmd.Flags().Lookup("input"))
-	viper.BindPFlag("output", generateCmd.Flags().Lookup("output"))
-	viper.BindPFlag("config", generateCmd.Flags().Lookup("config"))
-	viper.BindPFlag("namespace", generateCmd.Flags().Lookup("namespace"))
-	viper.BindPFlag("httpClient", generateCmd.Flags().Lookup("http-client"))
-	viper.BindPFlag("strictTypes", generateCmd.Flags().Lookup("strict-types"))
-	viper.BindPFlag("generateDocs", generateCmd.Flags().Lookup("generate-docs"))
+	_ = viper.BindPFlag("input", generateCmd.Flags().Lookup("input"))
+	_ = viper.BindPFlag("output", generateCmd.Flags().Lookup("output"))
+	_ = viper.BindPFlag("config", generateCmd.Flags().Lookup("config"))
+	_ = viper.BindPFlag("namespace", generateCmd.Flags().Lookup("namespace"))
+	_ = viper.BindPFlag("httpClient", generateCmd.Flags().Lookup("http-client"))
+	_ = viper.BindPFlag("strictTypes", generateCmd.Flags().Lookup("strict-types"))
+	_ = viper.BindPFlag("generateDocs", generateCmd.Flags().Lookup("generate-docs"))
 }
 
 func runGenerate(cmd *cobra.Command, args []string) error {
@@ -113,33 +113,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("✅ Generation completed successfully!")
-
-	return nil
-}
-
-func initConfig() error {
-	if configFile != "" {
-		// Use config file from the flag
-		viper.SetConfigFile(configFile)
-	} else {
-		// Search for config in common locations
-		viper.SetConfigName("piak")
-		viper.SetConfigType("yaml")
-		viper.AddConfigPath(".")
-		viper.AddConfigPath("$HOME/.piak")
-		viper.AddConfigPath("/etc/piak")
-	}
-
-	// Set environment variable prefix
-	viper.SetEnvPrefix("PIAK")
-	viper.AutomaticEnv()
-
-	// Read config file if it exists
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return err
-		}
-	}
 
 	return nil
 }

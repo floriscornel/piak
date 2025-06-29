@@ -1,24 +1,24 @@
 package analyzer
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// Analyzer analyzes OpenAPI specifications and extracts information for code generation
+// Analyzer analyzes OpenAPI specifications and extracts information for code generation.
 type Analyzer struct {
 	spec *openapi3.T
 }
 
-// New creates a new Analyzer instance
+// New creates a new Analyzer instance.
 func New(spec *openapi3.T) *Analyzer {
 	return &Analyzer{
 		spec: spec,
 	}
 }
 
-// SchemaInfo contains information about a schema for code generation
+// SchemaInfo contains information about a schema for code generation.
 type SchemaInfo struct {
 	Name        string
 	Schema      *openapi3.Schema
@@ -29,10 +29,10 @@ type SchemaInfo struct {
 	Description string
 }
 
-// AnalyzeSchemas extracts and analyzes all schemas from the OpenAPI specification
+// AnalyzeSchemas extracts and analyzes all schemas from the OpenAPI specification.
 func (a *Analyzer) AnalyzeSchemas() (map[string]*SchemaInfo, error) {
 	if a.spec.Components == nil || a.spec.Components.Schemas == nil {
-		return nil, fmt.Errorf("no schemas found in OpenAPI specification")
+		return nil, errors.New("no schemas found in OpenAPI specification")
 	}
 
 	schemas := make(map[string]*SchemaInfo)
@@ -63,7 +63,7 @@ func (a *Analyzer) AnalyzeSchemas() (map[string]*SchemaInfo, error) {
 	return schemas, nil
 }
 
-// GetInfo returns basic information about the OpenAPI specification
+// GetInfo returns basic information about the OpenAPI specification.
 func (a *Analyzer) GetInfo() map[string]interface{} {
 	info := make(map[string]interface{})
 

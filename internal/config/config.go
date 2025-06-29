@@ -1,13 +1,14 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/viper"
 )
 
-// Config holds the application configuration
+// Config holds the application configuration.
 type Config struct {
 	Input        string        `mapstructure:"input"`
 	Output       string        `mapstructure:"output"`
@@ -17,7 +18,7 @@ type Config struct {
 	OutputConfig OutputConfig  `mapstructure:"output_config"`
 }
 
-// PHPConfig holds PHP-specific generation settings
+// PHPConfig holds PHP-specific generation settings.
 type PHPConfig struct {
 	Namespace         string `mapstructure:"namespace"`
 	BasePath          string `mapstructure:"base_path"`
@@ -25,20 +26,20 @@ type PHPConfig struct {
 	GenerateDocblocks bool   `mapstructure:"generate_docblocks"`
 }
 
-// OpenAPIConfig holds OpenAPI processing settings
+// OpenAPIConfig holds OpenAPI processing settings.
 type OpenAPIConfig struct {
 	ValidateSpec bool `mapstructure:"validate_spec"`
 	ResolveRefs  bool `mapstructure:"resolve_refs"`
 }
 
-// OutputConfig holds output-specific settings
+// OutputConfig holds output-specific settings.
 type OutputConfig struct {
 	Overwrite         bool   `mapstructure:"overwrite"`
 	CreateDirectories bool   `mapstructure:"create_directories"`
 	FileExtension     string `mapstructure:"file_extension"`
 }
 
-// Load initializes and loads the configuration
+// Load initializes and loads the configuration.
 func Load(configFile string) (*Config, error) {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
@@ -60,7 +61,8 @@ func Load(configFile string) (*Config, error) {
 
 	// Read config file if it exists
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
 	}
@@ -73,7 +75,7 @@ func Load(configFile string) (*Config, error) {
 	return &cfg, nil
 }
 
-// LoadWithGlobalConfig initializes the global config (for root command)
+// LoadWithGlobalConfig initializes the global config (for root command).
 func LoadWithGlobalConfig(configFile string) error {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
@@ -99,7 +101,8 @@ func LoadWithGlobalConfig(configFile string) error {
 
 	// If a config file is found, read it in
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
 	}
@@ -121,7 +124,7 @@ func setDefaults() {
 	viper.SetDefault("output_config.file_extension", ".php")
 }
 
-// GetConfigFileUsed returns the config file that was used
+// GetConfigFileUsed returns the config file that was used.
 func GetConfigFileUsed() string {
 	return viper.ConfigFileUsed()
 }

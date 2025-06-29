@@ -2,7 +2,7 @@ package types
 
 import "github.com/getkin/kin-openapi/openapi3"
 
-// SpecialCase represents different edge cases in OpenAPI specs
+// SpecialCase represents different edge cases in OpenAPI specs.
 type SpecialCase int
 
 const (
@@ -21,7 +21,7 @@ const (
 	NullableOptional
 )
 
-// HTTPClientType represents different HTTP client implementations
+// HTTPClientType represents different HTTP client implementations.
 type HTTPClientType string
 
 const (
@@ -30,7 +30,7 @@ const (
 	LaravelClient HTTPClientType = "laravel"
 )
 
-// PHPType represents a PHP type with additional metadata
+// PHPType represents a PHP type with additional metadata.
 type PHPType struct {
 	Name       string
 	IsNullable bool
@@ -39,7 +39,7 @@ type PHPType struct {
 	DocComment string
 }
 
-// Property represents a schema property
+// Property represents a schema property.
 type Property struct {
 	Name        string
 	PHPType     PHPType
@@ -48,7 +48,7 @@ type Property struct {
 	Description string
 }
 
-// InheritanceStrategy defines how inheritance should be implemented
+// InheritanceStrategy defines how inheritance should be implemented.
 type InheritanceStrategy struct {
 	Type      InheritanceType
 	BaseClass string
@@ -64,7 +64,7 @@ const (
 	Composition
 )
 
-// SchemaModel represents a analyzed schema ready for code generation
+// SchemaModel represents a analyzed schema ready for code generation.
 type SchemaModel struct {
 	Name         string
 	PHPType      string
@@ -78,7 +78,7 @@ type SchemaModel struct {
 	Description  string
 }
 
-// EndpointModel represents an API endpoint
+// EndpointModel represents an API endpoint.
 type EndpointModel struct {
 	Path        string
 	Method      string
@@ -90,7 +90,7 @@ type EndpointModel struct {
 	Responses   []*ResponseModel
 }
 
-// ParameterModel represents an endpoint parameter
+// ParameterModel represents an endpoint parameter.
 type ParameterModel struct {
 	Name        string
 	In          string // query, path, header
@@ -99,7 +99,7 @@ type ParameterModel struct {
 	Description string
 }
 
-// RequestBodyModel represents a request body
+// RequestBodyModel represents a request body.
 type RequestBodyModel struct {
 	Required    bool
 	ContentType string
@@ -107,7 +107,7 @@ type RequestBodyModel struct {
 	Description string
 }
 
-// ResponseModel represents an endpoint response
+// ResponseModel represents an endpoint response.
 type ResponseModel struct {
 	StatusCode  string
 	ContentType string
@@ -115,7 +115,7 @@ type ResponseModel struct {
 	Description string
 }
 
-// InternalModel represents the complete analyzed OpenAPI specification
+// InternalModel represents the complete analyzed OpenAPI specification.
 type InternalModel struct {
 	Info      *InfoModel
 	Schemas   map[string]*SchemaModel
@@ -123,19 +123,19 @@ type InternalModel struct {
 	Config    *GeneratorConfig
 }
 
-// InfoModel represents API information
+// InfoModel represents API information.
 type InfoModel struct {
 	Title       string
 	Version     string
 	Description string
 }
 
-// GeneratorConfig holds all configuration for code generation
+// GeneratorConfig holds all configuration for code generation.
 type GeneratorConfig struct {
 	InputFile      string         `yaml:"inputFile"`
-	HTTPClient     HTTPClientType `yaml:"httpClient" validate:"oneof=guzzle curl laravel"`
-	Namespace      string         `yaml:"namespace" validate:"required"`
-	OutputDir      string         `yaml:"outputDir" validate:"required"`
+	HTTPClient     HTTPClientType `yaml:"httpClient"     validate:"oneof=guzzle curl laravel"`
+	Namespace      string         `yaml:"namespace"      validate:"required"`
+	OutputDir      string         `yaml:"outputDir"      validate:"required"`
 	StrictTypes    bool           `yaml:"strictTypes"`
 	GenerateTests  bool           `yaml:"generateTests"`
 	GenerateClient bool           `yaml:"generateClient"`
@@ -148,7 +148,7 @@ type GeneratorConfig struct {
 	OpenAPI OpenAPIConfig `yaml:"openapi"`
 }
 
-// PHPConfig holds PHP-specific generation settings
+// PHPConfig holds PHP-specific generation settings.
 type PHPConfig struct {
 	Namespace         string `yaml:"namespace"`
 	BasePath          string `yaml:"basePath"`
@@ -157,7 +157,7 @@ type PHPConfig struct {
 	FileExtension     string `yaml:"fileExtension"`
 }
 
-// OpenAPIConfig holds OpenAPI processing settings
+// OpenAPIConfig holds OpenAPI processing settings.
 type OpenAPIConfig struct {
 	ValidateSpec bool `yaml:"validateSpec"`
 	ResolveRefs  bool `yaml:"resolveRefs"`

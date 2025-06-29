@@ -8,13 +8,13 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// OpenAPIParser handles parsing of OpenAPI specifications
+// OpenAPIParser handles parsing of OpenAPI specifications.
 type OpenAPIParser struct {
 	validateSpec bool
 	resolveRefs  bool
 }
 
-// New creates a new OpenAPIParser instance
+// New creates a new OpenAPIParser instance.
 func New(validateSpec, resolveRefs bool) *OpenAPIParser {
 	return &OpenAPIParser{
 		validateSpec: validateSpec,
@@ -22,7 +22,7 @@ func New(validateSpec, resolveRefs bool) *OpenAPIParser {
 	}
 }
 
-// ParseFile parses an OpenAPI specification from a file
+// ParseFile parses an OpenAPI specification from a file.
 func (p *OpenAPIParser) ParseFile(filePath string) (*openapi3.T, error) {
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -47,7 +47,7 @@ func (p *OpenAPIParser) ParseFile(filePath string) (*openapi3.T, error) {
 	return spec, nil
 }
 
-// ParseBytes parses an OpenAPI specification from bytes
+// ParseBytes parses an OpenAPI specification from bytes.
 func (p *OpenAPIParser) ParseBytes(data []byte) (*openapi3.T, error) {
 	loader := openapi3.NewLoader()
 	spec, err := loader.LoadFromData(data)

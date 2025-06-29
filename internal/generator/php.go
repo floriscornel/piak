@@ -10,19 +10,19 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// PHPGenerator generates PHP code from OpenAPI specifications
+// PHPGenerator generates PHP code from OpenAPI specifications.
 type PHPGenerator struct {
 	config *types.GeneratorConfig
 }
 
-// NewPHPGenerator creates a new PHPGenerator instance
+// NewPHPGenerator creates a new PHPGenerator instance.
 func NewPHPGenerator(cfg *types.GeneratorConfig) *PHPGenerator {
 	return &PHPGenerator{
 		config: cfg,
 	}
 }
 
-// GenerateFromModel generates PHP code from the internal model
+// GenerateFromModel generates PHP code from the internal model.
 func (g *PHPGenerator) GenerateFromModel(model *types.InternalModel) error {
 	// Create output directory if it doesn't exist
 	if err := os.MkdirAll(g.config.OutputDir, 0755); err != nil {
@@ -155,6 +155,8 @@ func (g *PHPGenerator) generateClientContent(model *types.InternalModel) string 
 		content.WriteString("use GuzzleHttp\\RequestOptions;\n")
 	case types.LaravelClient:
 		content.WriteString("use Illuminate\\Http\\Client\\Factory as HttpFactory;\n")
+	case types.CurlClient:
+		// No specific imports needed for cURL
 	}
 
 	// Class docblock
@@ -179,6 +181,8 @@ func (g *PHPGenerator) generateClientContent(model *types.InternalModel) string 
 		content.WriteString("    private Client $client;\n")
 	case types.LaravelClient:
 		content.WriteString("    private HttpFactory $http;\n")
+	case types.CurlClient:
+		// No specific client property needed for cURL
 	}
 	content.WriteString("    private string $baseUrl;\n")
 	content.WriteString("    private array $defaultHeaders;\n\n")
@@ -196,6 +200,8 @@ func (g *PHPGenerator) generateClientContent(model *types.InternalModel) string 
 		content.WriteString("        $this->client = new Client();\n")
 	case types.LaravelClient:
 		content.WriteString("        $this->http = app(HttpFactory::class);\n")
+	case types.CurlClient:
+		// No specific client initialization needed for cURL
 	}
 
 	content.WriteString("    }\n")
@@ -215,9 +221,9 @@ func (g *PHPGenerator) generateProperty(content *strings.Builder, prop *types.Pr
 	if g.config.PHP.GenerateDocblocks {
 		content.WriteString("\n    /**\n")
 		if prop.Description != "" {
-			content.WriteString(fmt.Sprintf("     * %s\n", prop.Description))
+			fmt.Fprintf(content, "     * %s\n", prop.Description)
 		}
-		content.WriteString(fmt.Sprintf("     * @var %s\n", prop.PHPType.DocComment))
+		fmt.Fprintf(content, "     * @var %s\n", prop.PHPType.DocComment)
 		content.WriteString("     */\n")
 	}
 
@@ -227,7 +233,7 @@ func (g *PHPGenerator) generateProperty(content *strings.Builder, prop *types.Pr
 		nullable = "?"
 	}
 
-	content.WriteString(fmt.Sprintf("    private %s%s $%s;\n", nullable, prop.PHPType.Name, propName))
+	fmt.Fprintf(content, "    private %s%s $%s;\n", nullable, prop.PHPType.Name, propName)
 }
 
 func (g *PHPGenerator) generateConstructor(content *strings.Builder, schema *types.SchemaModel) {
@@ -259,7 +265,7 @@ func (g *PHPGenerator) generateConstructor(content *strings.Builder, schema *typ
 	// Constructor body
 	for _, prop := range schema.Properties {
 		paramName := strcase.ToSnake(prop.Name)
-		content.WriteString(fmt.Sprintf("        $this->%s = $%s;\n", paramName, paramName))
+		fmt.Fprintf(content, "        $this->%s = $%s;\n", paramName, paramName)
 	}
 
 	content.WriteString("    }\n")
@@ -275,9 +281,9 @@ func (g *PHPGenerator) generateAccessors(content *strings.Builder, prop *types.P
 		returnType = "?" + returnType
 	}
 
-	content.WriteString(fmt.Sprintf("\n    public function get%s(): %s\n", methodName, returnType))
+	fmt.Fprintf(content, "\n    public function get%s(): %s\n", methodName, returnType)
 	content.WriteString("    {\n")
-	content.WriteString(fmt.Sprintf("        return $this->%s;\n", propName))
+	fmt.Fprintf(content, "        return $this->%s;\n", propName)
 	content.WriteString("    }\n")
 
 	// Setter
@@ -286,9 +292,9 @@ func (g *PHPGenerator) generateAccessors(content *strings.Builder, prop *types.P
 		paramType = "?" + paramType
 	}
 
-	content.WriteString(fmt.Sprintf("\n    public function set%s(%s $%s): self\n", methodName, paramType, propName))
+	fmt.Fprintf(content, "\n    public function set%s(%s $%s): self\n", methodName, paramType, propName)
 	content.WriteString("    {\n")
-	content.WriteString(fmt.Sprintf("        $this->%s = $%s;\n", propName, propName))
+	fmt.Fprintf(content, "        $this->%s = $%s;\n", propName, propName)
 	content.WriteString("        return $this;\n")
 	content.WriteString("    }\n")
 }

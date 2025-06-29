@@ -9,14 +9,14 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// Generator coordinates the entire generation process
+// Generator coordinates the entire generation process.
 type Generator struct {
 	config *types.GeneratorConfig
 	parser *parser.OpenAPIParser
 	phpGen *PHPGenerator
 }
 
-// NewGenerator creates a new Generator instance
+// NewGenerator creates a new Generator instance.
 func NewGenerator(cfg *types.GeneratorConfig) *Generator {
 	return &Generator{
 		config: cfg,
@@ -25,7 +25,7 @@ func NewGenerator(cfg *types.GeneratorConfig) *Generator {
 	}
 }
 
-// Generate performs the complete generation process
+// Generate performs the complete generation process.
 func (g *Generator) Generate() error {
 	// Parse the OpenAPI specification
 	if g.config.PHP.GenerateDocblocks {
@@ -96,7 +96,7 @@ func (g *Generator) Generate() error {
 	return nil
 }
 
-// Helper function to convert old properties to new format
+// Helper function to convert old properties to new format.
 func convertProperties(oldProps map[string]*openapi3.SchemaRef) []*types.Property {
 	var properties []*types.Property
 
@@ -122,7 +122,7 @@ func convertProperties(oldProps map[string]*openapi3.SchemaRef) []*types.Propert
 	return properties
 }
 
-// Helper function to map OpenAPI types to PHP types
+// Helper function to map OpenAPI types to PHP types.
 func mapOpenAPITypeToPHP(schema *openapi3.Schema) string {
 	if len(schema.Type.Slice()) == 0 {
 		return "mixed"
