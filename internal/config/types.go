@@ -47,8 +47,8 @@ type InfoModel struct {
 // GeneratorConfig holds the essential settings for code generation.
 type GeneratorConfig struct {
 	InputFile      string `yaml:"input_file"`
-	Namespace      string `yaml:"namespace"      validate:"required"`
-	OutputDir      string `yaml:"output_dir"     validate:"required"`
+	Namespace      string `yaml:"namespace"       validate:"required"`
+	OutputDir      string `yaml:"output_dir"      validate:"required"`
 	GenerateTests  bool   `yaml:"generate_tests"`
 	GenerateClient bool   `yaml:"generate_client"`
 }

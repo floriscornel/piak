@@ -106,8 +106,8 @@ func (g *PHPGenerator) copyOpenAPISpec() error {
 	destPath := filepath.Join(g.config.OutputDir, sourcePath)
 
 	// Write to destination
-	if err := os.WriteFile(destPath, sourceData, 0644); err != nil {
-		return fmt.Errorf("failed to write OpenAPI spec: %w", err)
+	if writeErr := os.WriteFile(destPath, sourceData, 0644); writeErr != nil {
+		return fmt.Errorf("failed to write OpenAPI spec: %w", writeErr)
 	}
 
 	return nil

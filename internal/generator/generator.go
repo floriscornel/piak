@@ -93,48 +93,53 @@ func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []strin
 	}
 
 	for name, propRef := range oldProps {
-		if propRef.Value != nil {
-			isRequired := requiredMap[name]
-
-			// Handle schema references first
-			var typeName string
-			if propRef.Ref != "" {
-				// Extract schema name from reference
-				parts := strings.Split(propRef.Ref, "/")
-				if len(parts) > 0 {
-					typeName = parts[len(parts)-1]
-				} else {
-					typeName = "mixed"
-				}
-			} else {
-				typeName = mapOpenAPITypeToPHP(propRef.Value)
-			}
-
-			phpType := config.PHPType{
-				Name:       typeName,
-				IsNullable: !isRequired, // Required fields are not nullable
-				DocComment: typeName,
-			}
-
-			// Handle array types with proper item type detection
-			if phpType.Name == "array" && propRef.Value.Items != nil {
-				itemType := resolveArrayItemType(propRef.Value.Items)
-				phpType.IsArray = true
-				phpType.DocComment = fmt.Sprintf("array<%s>", itemType)
-			}
-
-			prop := &config.Property{
-				Name:        name,
-				PHPType:     phpType,
-				OpenAPIType: propRef.Value,
-				Required:    isRequired,
-				Description: propRef.Value.Description,
-			}
-			properties = append(properties, prop)
+		if propRef.Value == nil {
+			continue
 		}
+
+		prop := createPropertyFromRef(name, propRef, requiredMap[name])
+		properties = append(properties, prop)
 	}
 
 	return properties
+}
+
+// createPropertyFromRef creates a property from an OpenAPI schema reference.
+func createPropertyFromRef(name string, propRef *openapi3.SchemaRef, isRequired bool) *config.Property {
+	// Handle schema references first
+	var typeName string
+	if propRef.Ref != "" {
+		// Extract schema name from reference
+		parts := strings.Split(propRef.Ref, "/")
+		if len(parts) > 0 {
+			typeName = parts[len(parts)-1]
+		} else {
+			typeName = "mixed"
+		}
+	} else {
+		typeName = mapOpenAPITypeToPHP(propRef.Value)
+	}
+
+	phpType := config.PHPType{
+		Name:       typeName,
+		IsNullable: !isRequired, // Required fields are not nullable
+		DocComment: typeName,
+	}
+
+	// Handle array types with proper item type detection
+	if phpType.Name == "array" && propRef.Value.Items != nil {
+		itemType := resolveArrayItemType(propRef.Value.Items)
+		phpType.IsArray = true
+		phpType.DocComment = fmt.Sprintf("array<%s>", itemType)
+	}
+
+	return &config.Property{
+		Name:        name,
+		PHPType:     phpType,
+		OpenAPIType: propRef.Value,
+		Required:    isRequired,
+		Description: propRef.Value.Description,
+	}
 }
 
 // Helper function to map OpenAPI types to PHP types.

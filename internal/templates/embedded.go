@@ -10,30 +10,18 @@ import (
 )
 
 //go:embed *.tmpl partials/**/*.tmpl
-var TemplateFS embed.FS
+var templateFS embed.FS
 
 // GetTemplates returns all embedded templates with custom functions.
 func GetTemplates() (*template.Template, error) {
 	funcMap := template.FuncMap{
 		// Basic string functions
-		"toCamel": strcase.ToCamel,
-		"toCamelCase": func(s string) string {
-			camel := strcase.ToCamel(s)
-			if camel == "" {
-				return camel
-			}
-			return strings.ToLower(camel[:1]) + camel[1:]
-		},
+		"toCamel":          strcase.ToCamel,
 		"toSnake":          strcase.ToSnake,
 		"toLower":          strings.ToLower,
 		"toUpper":          strings.ToUpper,
 		"toScreamingSnake": strcase.ToScreamingSnake,
-		"capitalize": func(s string) string {
-			if s == "" {
-				return s
-			}
-			return strings.ToUpper(s[:1]) + s[1:]
-		},
+
 		"pluralize":   inflection.Plural,
 		"singularize": inflection.Singular,
 		"join":        strings.Join,
@@ -44,19 +32,9 @@ func GetTemplates() (*template.Template, error) {
 		"add":         func(a, b int) int { return a + b },
 
 		// PHP-specific type formatting
-		"formatPHPType":          formatPHPType,
-		"formatPHPDocType":       formatPHPDocType,
-		"formatConstructorParam": formatConstructorParam,
-		"formatDefaultValue":     formatDefaultValue,
-
-		// Code generation helpers
-		"generateUseStatements": generateUseStatements,
+		"formatPHPType":         formatPHPType,
 		"renderFromArrayMethod": renderFromArrayMethod,
 		"renderToArrayMethod":   renderToArrayMethod,
-
-		// Utility functions
-		"getHTTPClientImports": getHTTPClientImports,
-		"indent":               indent,
 
 		// Test data generation helpers
 		"generateTestData":                generateTestData,
@@ -64,17 +42,12 @@ func GetTemplates() (*template.Template, error) {
 		"generateAssertions":              generateAssertions,
 		"generateSerializationAssertions": generateSerializationAssertions,
 		"generateMinimalTestData":         generateMinimalTestData,
-
-		// Composer.json helpers
-		"generatePackageName":  generatePackageName,
-		"prepareJSONNamespace": prepareJSONNamespace,
-		"cleanDescription":     cleanDescription,
 	}
 
 	tmpl := template.New("").Funcs(funcMap)
 
 	// Try to parse templates, return empty template if none exist
-	parsed, err := tmpl.ParseFS(TemplateFS, "*.tmpl", "partials/**/*.tmpl")
+	parsed, err := tmpl.ParseFS(templateFS, "*.tmpl", "partials/**/*.tmpl")
 	if err != nil {
 		// Return just the base template with functions if no .tmpl files exist
 		return tmpl, err

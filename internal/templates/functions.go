@@ -2,11 +2,9 @@ package templates
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/floriscornel/piak/internal/config"
-	"github.com/iancoleman/strcase"
 )
 
 // PHP-specific template helper functions
@@ -29,87 +27,6 @@ func formatPHPType(phpType config.PHPType) string {
 	return typeStr
 }
 
-// formatPHPDocType formats a PHP type for PHPDoc comments.
-func formatPHPDocType(phpType config.PHPType) string {
-	var typeStr string
-
-	// Handle basic array types
-	if phpType.IsArray {
-		// Use array<string, mixed> for simplicity
-		typeStr = "array<string, mixed>"
-	} else {
-		typeStr = phpType.Name
-	}
-
-	if phpType.IsNullable && !strings.Contains(typeStr, "null") {
-		typeStr += "|null"
-	}
-
-	return typeStr
-}
-
-// generateUseStatements generates sorted use statements from import list.
-func generateUseStatements(imports []string) string {
-	if len(imports) == 0 {
-		return ""
-	}
-
-	// Remove duplicates and sort
-	uniqueImports := make(map[string]bool)
-	for _, imp := range imports {
-		if imp != "" {
-			uniqueImports[imp] = true
-		}
-	}
-
-	var sortedImports []string
-	for imp := range uniqueImports {
-		sortedImports = append(sortedImports, imp)
-	}
-	sort.Strings(sortedImports)
-
-	var result strings.Builder
-	for _, imp := range sortedImports {
-		result.WriteString(fmt.Sprintf("use %s;\n", imp))
-	}
-
-	return result.String()
-}
-
-// formatConstructorParam formats a constructor parameter with proper type and default.
-func formatConstructorParam(prop *config.Property) string {
-	paramType := prop.PHPType.Name
-	paramName := strcase.ToSnake(prop.Name)
-
-	if !prop.Required {
-		paramType = "?" + paramType
-		return fmt.Sprintf("%s $%s = null", paramType, paramName)
-	}
-
-	return fmt.Sprintf("%s $%s", paramType, paramName)
-}
-
-// formatDefaultValue formats a default value for PHP.
-func formatDefaultValue(value interface{}) string {
-	if value == nil {
-		return "null"
-	}
-
-	switch v := value.(type) {
-	case string:
-		return fmt.Sprintf("'%s'", strings.ReplaceAll(v, "'", "\\'"))
-	case bool:
-		if v {
-			return "true"
-		}
-		return "false"
-	case int, int32, int64, float32, float64:
-		return fmt.Sprintf("%v", v)
-	default:
-		return "null"
-	}
-}
-
 // renderFromArrayMethod generates a fromArray method for models.
 func renderFromArrayMethod(model *config.SchemaModel) string {
 	var result strings.Builder
@@ -126,7 +43,11 @@ func renderFromArrayMethod(model *config.SchemaModel) string {
 	for _, prop := range model.Properties {
 		if prop.Required {
 			result.WriteString(fmt.Sprintf("    if (!isset($data['%s'])) {\n", prop.Name))
-			result.WriteString(fmt.Sprintf("        throw new \\InvalidArgumentException('Missing required field: %s');\n", prop.Name))
+			errMsg := fmt.Sprintf(
+				"        throw new \\InvalidArgumentException('Missing required field: %s');\n",
+				prop.Name,
+			)
+			result.WriteString(errMsg)
 			result.WriteString("    }\n")
 		}
 	}
@@ -146,7 +67,8 @@ func renderFromArrayMethod(model *config.SchemaModel) string {
 	}
 
 	// Combine required and optional properties in correct order
-	allProps := append(requiredProps, optionalProps...)
+	requiredProps = append(requiredProps, optionalProps...)
+	allProps := requiredProps
 
 	for i, prop := range allProps {
 		propAccess := fmt.Sprintf("$data['%s'] ?? null", prop.Name)
@@ -158,34 +80,6 @@ func renderFromArrayMethod(model *config.SchemaModel) string {
 	}
 	result.WriteString("    );\n")
 	result.WriteString("}\n")
-
-	return result.String()
-}
-
-// getHTTPClientImports returns imports for HTTP client.
-func getHTTPClientImports(_ interface{}) []string {
-	// Return empty array - no special imports needed currently
-	return []string{}
-}
-
-// indent adds indentation to text.
-func indent(text string, spaces int) string {
-	if text == "" {
-		return text
-	}
-
-	indentStr := strings.Repeat(" ", spaces)
-	lines := strings.Split(text, "\n")
-	var result strings.Builder
-
-	for i, line := range lines {
-		if line != "" {
-			result.WriteString(indentStr + line)
-		}
-		if i < len(lines)-1 {
-			result.WriteString("\n")
-		}
-	}
 
 	return result.String()
 }
@@ -293,37 +187,4 @@ func generateMinimalTestData(schema *config.SchemaModel) string {
 	}
 
 	return fmt.Sprintf("[\n        %s\n    ]", strings.Join(properties, ",\n        "))
-}
-
-// Composer.json template helpers
-
-// generatePackageName generates a package name from the namespace.
-func generatePackageName(namespace string) string {
-	// Convert namespace to lowercase with hyphens
-	namespaceParts := strings.Split(namespace, "\\")
-	vendor := strings.ToLower(namespaceParts[0])
-	var packageName string
-	if len(namespaceParts) > 1 {
-		packageName = fmt.Sprintf("%s/%s", vendor, strings.ToLower(strings.Join(namespaceParts[1:], "-")))
-	} else {
-		packageName = fmt.Sprintf("%s/sdk", vendor)
-	}
-	return packageName
-}
-
-// prepareJSONNamespace escapes backslashes for JSON.
-func prepareJSONNamespace(namespace string) string {
-	return strings.ReplaceAll(namespace, "\\", "\\\\")
-}
-
-// cleanDescription cleans and escapes description for JSON.
-func cleanDescription(description string) string {
-	cleaned := strings.ReplaceAll(description, "\n", " ")
-	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
-	cleaned = strings.ReplaceAll(cleaned, "\"", "\\\"")
-	cleaned = strings.TrimSpace(cleaned)
-	if cleaned == "" {
-		cleaned = "Generated API client"
-	}
-	return cleaned
 }

@@ -71,9 +71,9 @@ paths: {}
 				namespace = origNamespace
 			}()
 
-			cfg, err := loadConfigFromFlagsAndFile("")
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.expectedErr)
+			cfg, loadErr := loadConfigFromFlagsAndFile("")
+			require.Error(t, loadErr)
+			assert.Contains(t, loadErr.Error(), tt.expectedErr)
 			assert.Nil(t, cfg)
 		})
 	}

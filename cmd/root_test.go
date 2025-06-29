@@ -8,9 +8,9 @@ import (
 
 func TestGetGlobalFlags(t *testing.T) {
 	// Test default values
-	configFile, verbose := GetGlobalFlags()
-	assert.Equal(t, "", configFile)
-	assert.False(t, verbose)
+	cfgPath, verboseFlag := GetGlobalFlags()
+	assert.Empty(t, cfgPath)
+	assert.False(t, verboseFlag)
 }
 
 func TestRootCmd_Initialization(t *testing.T) {

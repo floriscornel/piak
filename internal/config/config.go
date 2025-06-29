@@ -12,16 +12,16 @@ import (
 
 // Config holds the application configuration.
 type Config struct {
-	Input     string `mapstructure:"input"     validate:"required" flag:"input,i" usage:"Input OpenAPI specification file"`
-	Output    string `mapstructure:"output"    validate:"required" flag:"output,o" usage:"Output directory for generated PHP files"`
-	Namespace string `mapstructure:"namespace" validate:"required" flag:"namespace,n" usage:"PHP namespace for generated classes"`
+	Input     string `mapstructure:"input"     validate:"required" flag:"input,i"     usage:"Input OpenAPI spec file"`
+	Output    string `mapstructure:"output"    validate:"required" flag:"output,o"    usage:"Output dir for PHP files"`
+	Namespace string `mapstructure:"namespace" validate:"required" flag:"namespace,n" usage:"PHP namespace"`
 }
 
 // GenerateConfig holds generation-specific configuration.
 type GenerateConfig struct {
 	*Config
 	GenerateClient bool `mapstructure:"generate_client" flag:"generate-client" usage:"Generate HTTP client code" default:"true"`
-	GenerateTests  bool `mapstructure:"generate_tests"  flag:"generate-tests" usage:"Generate test files" default:"false"`
+	GenerateTests  bool `mapstructure:"generate_tests"  flag:"generate-tests"  usage:"Generate test files"       default:"false"`
 }
 
 // Loader handles configuration loading and validation.
