@@ -3,88 +3,66 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/floriscornel/piak/internal/config"
 	"github.com/floriscornel/piak/internal/generator"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 var (
-	// Command-specific flags.
-	inputFile      string
-	outputDir      string
-	configFile     string
-	namespace      string
-	httpClient     string
-	strictTypes    bool
-	generateDocs   bool
-	generateClient bool
-	generateTests  bool
-	dryRun         bool
+	// Only keep command-specific flags that aren't in config
+	configFile string
 )
 
+// generateCmd represents the generate command.
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate PHP code from OpenAPI specification",
-	Long: `Generate PHP code from an OpenAPI specification file.
-	
-This command reads an OpenAPI specification (YAML or JSON) and generates
-corresponding PHP classes and models in the specified output directory.
+	Long: `Generate PHP classes, models, and optionally client code from an OpenAPI 3.0+ specification.
 
-The command supports various configuration options that can be specified via:
-1. Command-line flags (highest priority)
-2. Environment variables (PIAK_*)
-3. Configuration file (./piak.yaml in current directory)
-4. Default values (lowest priority)`,
-	Example: `  # Basic usage
-  piak generate -i openapi.yaml -o ./generated
+This command reads an OpenAPI specification file and generates corresponding PHP code
+including models, DTOs, and optionally HTTP client classes.
 
-  # With custom namespace and HTTP client
-  piak generate -i api.json --namespace "MyApp\\Api" --http-client guzzle
+Configuration can be provided through:
+1. Command line flags (highest priority)
+2. Environment variables with PIAK_ prefix  
+3. Configuration file (piak.yaml)
+4. Default values (lowest priority)
 
-  # Using project config file
-  piak generate -i spec.yaml --config piak.yaml
-
-  # Dry run to preview changes
-  piak generate -i api.yaml --dry-run
-
-  # Generate with tests
-  piak generate -i api.yaml --generate-tests`,
+Examples:
+  piak generate -i api.yaml -o ./generated
+  piak generate --input api.yaml --namespace "MyApp\\Models"
+  piak generate --config ./custom-config.yaml --dry-run`,
 	RunE: runGenerate,
 }
 
 func init() {
-	// Required flags - but validation handled by config system to allow config file values
-	generateCmd.Flags().
-		StringVarP(&inputFile, "input", "i", "", "Input OpenAPI specification file (required)")
-
-		// Note: Removed MarkFlagRequired to allow config file to provide required values
-
-	// Output configuration
-	generateCmd.Flags().
-		StringVarP(&outputDir, "output", "o", "", "Output directory for generated PHP files")
+	// First add the config file flag manually
 	generateCmd.Flags().StringVarP(&configFile, "config", "c", "", "Configuration file path")
 
-	// PHP generation options
-	generateCmd.Flags().
-		StringVarP(&namespace, "namespace", "n", "", "PHP namespace for generated classes")
-	generateCmd.Flags().
-		StringVar(&httpClient, "http-client", "", "HTTP client to use (guzzle, curl, laravel)")
-	generateCmd.Flags().BoolVar(&strictTypes, "strict-types", true, "Generate strict PHP types")
-	generateCmd.Flags().BoolVar(&generateDocs, "generate-docs", true, "Generate PHPDoc comments")
+	// Create a temporary viper instance for auto-flag generation (only for init)
+	tempViper := viper.New()
 
-	// Generation options
-	generateCmd.Flags().
-		BoolVar(&generateClient, "generate-client", true, "Generate HTTP client code")
-	generateCmd.Flags().BoolVar(&generateTests, "generate-tests", false, "Generate test files")
-	generateCmd.Flags().
-		BoolVar(&dryRun, "dry-run", false, "Show what would be generated without creating files")
+	// Create a temporary config instance to generate flags from
+	tempConfig := &config.GenerateConfig{
+		Config: &config.Config{},
+	}
+
+	// Use auto-flags to generate CLI flags from struct tags
+	autoFlags := config.NewAutoFlags(generateCmd, tempViper)
+	if err := autoFlags.BindFlags(tempConfig); err != nil {
+		// Handle the error gracefully during init
+		fmt.Printf("Warning: Failed to auto-bind flags: %v\n", err)
+	}
 }
 
-// runGenerate executes the generate command with proper config loading and validation.
-func runGenerate(_ *cobra.Command, _ []string) error {
+// runGenerate executes the generate command with auto-generated flags.
+func runGenerate(cmd *cobra.Command, _ []string) error {
 	// Get global flags from root command
-	globalConfigFile, globalVerbose := GetGlobalFlags()
+	globalConfigFile, _ := GetGlobalFlags()
 
 	// Use global config file if local one isn't specified
 	actualConfigFile := configFile
@@ -95,20 +73,19 @@ func runGenerate(_ *cobra.Command, _ []string) error {
 	// Create config loader
 	loader := config.NewLoader()
 
-	// Bind command-line flags to config
-	flags := buildFlagsMap(globalVerbose)
-	if err := loader.BindFlags(flags); err != nil {
+	// Bind the cobra flags to viper (this bridges auto-generated flags with the config system)
+	if err := bindCobraFlagsToViper(cmd, loader); err != nil {
 		return fmt.Errorf("failed to bind flags: %w", err)
 	}
 
-	// Load and validate configuration
+	// Load configuration normally (flags are now bound)
 	cfg, err := loader.LoadGenerateConfig(actualConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Display configuration summary if verbose
-	if cfg.Verbose || dryRun {
+	if cfg.Verbose || cfg.DryRun {
 		displayConfigSummary(cfg, loader.GetConfigFileUsed())
 	}
 
@@ -121,54 +98,82 @@ func runGenerate(_ *cobra.Command, _ []string) error {
 	return executeGeneration(cfg)
 }
 
-// buildFlagsMap creates a map of flag values for config binding.
-func buildFlagsMap(globalVerbose bool) map[string]interface{} {
-	flags := make(map[string]interface{})
+// bindCobraFlagsToViper binds all cobra flags to the viper instance
+func bindCobraFlagsToViper(cmd *cobra.Command, loader *config.Loader) error {
+	flagMap := make(map[string]interface{})
 
-	// Only set non-zero values to preserve config file/default precedence
-	if inputFile != "" {
-		flags["input"] = inputFile
-	}
-	if outputDir != "" {
-		flags["output"] = outputDir
-	}
-	if namespace != "" {
-		flags["php.namespace"] = namespace
-	}
-	if httpClient != "" {
-		flags["http_client"] = httpClient
+	// Map flag names to config keys - this must match the mapstructure tags
+	flagToConfigMap := map[string]string{
+		"input":               "input",
+		"output":              "output",
+		"verbose":             "verbose",
+		"namespace":           "php.namespace",
+		"base-path":           "php.base_path",
+		"generate-docs":       "php.generate_docblocks",
+		"file-extension":      "php.file_extension",
+		"php-strict-types":    "php.use_strict_types",
+		"generate-from-array": "php.generate_from_array",
+		"psr-compliant":       "php.psr_compliant",
+		"use-enums":           "php.use_enums",
+		"use-readonly-props":  "php.use_readonly_props",
+		"validate-spec":       "openapi.validate_spec",
+		"resolve-refs":        "openapi.resolve_refs",
+		"overwrite":           "output_config.overwrite",
+		"create-directories":  "output_config.create_directories",
+		"http-client":         "http_client",
+		"strict-types":        "strict_types",
+		"generate-client":     "generate_client",
+		"generate-tests":      "generate_tests",
+		"dry-run":             "dry_run",
 	}
 
-	// Set global verbose flag
-	flags["verbose"] = globalVerbose
+	// Iterate through all flags and add their values to the map
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		if flag.Changed {
+			configKey, exists := flagToConfigMap[flag.Name]
+			if !exists {
+				// Skip unknown flags (like config, help)
+				return
+			}
 
-	// Boolean flags - always set since cobra defaults them
-	flags["strict_types"] = strictTypes
-	flags["php.generate_docblocks"] = generateDocs
-	flags["generate_client"] = generateClient
-	flags["generate_tests"] = generateTests
-	flags["dry_run"] = dryRun
+			// Handle different flag types
+			switch flag.Value.Type() {
+			case "bool":
+				boolVal, _ := strconv.ParseBool(flag.Value.String())
+				flagMap[configKey] = boolVal
+			case "int":
+				intVal, _ := strconv.Atoi(flag.Value.String())
+				flagMap[configKey] = intVal
+			case "float32", "float64":
+				floatVal, _ := strconv.ParseFloat(flag.Value.String(), 64)
+				flagMap[configKey] = floatVal
+			default:
+				// String and other types
+				flagMap[configKey] = flag.Value.String()
+			}
+		}
+	})
 
-	return flags
+	// Use the existing BindFlags method
+	return loader.BindFlags(flagMap)
 }
 
-// displayConfigSummary shows the current configuration to the user.
+// displayConfigSummary shows the current configuration.
 func displayConfigSummary(cfg *config.GenerateConfig, configFile string) {
-	fmt.Printf("📋 Configuration Summary\n")
-	fmt.Printf("═══════════════════════\n")
-
+	fmt.Printf("🔧 Configuration Summary\n")
+	fmt.Printf("========================\n")
 	if configFile != "" {
-		fmt.Printf("📄 Config file: %s\n", configFile)
-	} else {
-		fmt.Printf("📄 Config file: <using defaults>\n")
+		fmt.Printf("📋 Config file: %s\n", configFile)
 	}
-
 	fmt.Printf("📥 Input file: %s\n", cfg.Input)
 	fmt.Printf("📁 Output directory: %s\n", cfg.Output)
 	fmt.Printf("🏷️  PHP namespace: %s\n", cfg.PHP.Namespace)
 	fmt.Printf("🌐 HTTP client: %s\n", cfg.HTTPClient)
-	fmt.Printf("🔒 Strict types: %t\n", cfg.StrictTypes)
+	fmt.Printf("🔒 Strict validation: %t\n", cfg.StrictTypes)
 	fmt.Printf("📝 Generate docs: %t\n", cfg.PHP.GenerateDocblocks)
+	fmt.Printf("⚡ PHP strict types: %t\n", cfg.PHP.UseStrictTypes)
+	fmt.Printf("🔄 Generate fromArray(): %t\n", cfg.PHP.GenerateFromArray)
+	fmt.Printf("🏛️  Use enums: %t\n", cfg.PHP.UseEnums)
 	fmt.Printf("🔧 Generate client: %t\n", cfg.GenerateClient)
 	fmt.Printf("🧪 Generate tests: %t\n", cfg.GenerateTests)
 
@@ -179,22 +184,19 @@ func displayConfigSummary(cfg *config.GenerateConfig, configFile string) {
 	fmt.Printf("\n")
 }
 
-// handleDryRun shows what would be generated without actually creating files.
+// handleDryRun simulates the generation process without creating files.
 func handleDryRun(cfg *config.GenerateConfig) error {
-	fmt.Printf("🔍 DRY RUN MODE - Preview of planned generation\n")
-	fmt.Printf("═════════════════════════════════════════════\n\n")
+	fmt.Printf("🔍 DRY RUN: Simulating generation process...\n\n")
 
-	// Convert to generator config
 	genConfig := cfg.ToGeneratorConfig()
 
-	// Create generator
+	// Create generator instance
 	gen, err := generator.NewGenerator(genConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create generator: %w", err)
 	}
 
-	// TODO: Add a DryRun method to generator interface
-	// For now, just show what would be done
+	// TODO: Implement DryRun method in generator
 	fmt.Printf("📁 Would create output directory: %s\n", cfg.Output)
 	fmt.Printf("🔄 Would process OpenAPI file: %s\n", cfg.Input)
 	fmt.Printf("🏗️  Would generate PHP classes with namespace: %s\n", cfg.PHP.Namespace)
@@ -210,49 +212,40 @@ func handleDryRun(cfg *config.GenerateConfig) error {
 	fmt.Printf("\n✅ Dry run completed. Use --verbose to see full configuration.\n")
 	fmt.Printf("💡 Remove --dry-run flag to execute actual generation.\n")
 
-	// Validate that we can actually do the work
-	_ = gen // Use the generator to avoid unused variable
+	// Validate that we can actually do the work by creating the generator
+	_ = gen
 
 	return nil
 }
 
 // executeGeneration performs the actual code generation.
 func executeGeneration(cfg *config.GenerateConfig) error {
-	// Create output directory if it doesn't exist and creation is enabled
-	if cfg.OutputConfig.CreateDirectories {
-		if err := os.MkdirAll(cfg.Output, 0750); err != nil {
-			return fmt.Errorf("failed to create output directory: %w", err)
-		}
-	}
-
-	// Convert to generator config
 	genConfig := cfg.ToGeneratorConfig()
 
-	// Create and run generator
+	// Create generator instance
 	gen, err := generator.NewGenerator(genConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create generator: %w", err)
 	}
 
-	fmt.Printf("🔄 Generating PHP code from: %s\n", cfg.Input)
+	// Check if output directory exists
+	if _, err := os.Stat(cfg.Output); os.IsNotExist(err) {
+		if cfg.OutputConfig.CreateDirectories {
+			if mkdirErr := os.MkdirAll(cfg.Output, 0755); mkdirErr != nil {
+				return fmt.Errorf("failed to create output directory: %w", mkdirErr)
+			}
+			fmt.Printf("📁 Created output directory: %s\n", cfg.Output)
+		} else {
+			return fmt.Errorf("output directory does not exist: %s", cfg.Output)
+		}
+	}
 
+	// Generate code
+	fmt.Printf("🚀 Starting code generation...\n")
 	if err := gen.Generate(); err != nil {
-		return fmt.Errorf("generation failed: %w", err)
+		return fmt.Errorf("code generation failed: %w", err)
 	}
 
-	// Success message
-	fmt.Printf("✅ Generation completed successfully!\n")
-	fmt.Printf("📁 Generated files in: %s\n", cfg.Output)
-
-	if cfg.GenerateClient {
-		fmt.Printf("🌐 HTTP client: %s\n", cfg.HTTPClient)
-	}
-
-	if cfg.Verbose {
-		fmt.Printf("🏷️  Namespace: %s\n", cfg.PHP.Namespace)
-		fmt.Printf("📝 Documentation: %t\n", cfg.PHP.GenerateDocblocks)
-		fmt.Printf("🔒 Strict types: %t\n", cfg.StrictTypes)
-	}
-
+	fmt.Printf("✅ Code generation completed successfully!\n")
 	return nil
 }

@@ -12,7 +12,11 @@ php:
   base_path: "src"
   use_strict_types: true
   generate_docblocks: true
-  generateFromArray: true
+  file_extension: ".php"
+  psr_compliant: true
+  generate_from_array: true
+  use_readonly_props: true
+  use_enums: true
 
 # OpenAPI Processing Settings
 openapi:
@@ -23,7 +27,6 @@ openapi:
 output_config:
   overwrite: true
   create_directories: true
-  file_extension: ".php"
 
 # Logging
 verbose: false 

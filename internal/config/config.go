@@ -8,48 +8,28 @@ import (
 	"strings"
 
 	"github.com/floriscornel/piak/internal/types"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 // Config holds the application configuration.
 type Config struct {
-	Input        string        `mapstructure:"input"         validate:"required"`
-	Output       string        `mapstructure:"output"        validate:"required"`
-	Verbose      bool          `mapstructure:"verbose"`
-	PHP          PHPConfig     `mapstructure:"php"`
-	OpenAPI      OpenAPIConfig `mapstructure:"openapi"`
-	OutputConfig OutputConfig  `mapstructure:"output_config"`
-}
-
-// PHPConfig holds PHP-specific generation settings.
-type PHPConfig struct {
-	Namespace         string `mapstructure:"namespace"          validate:"required"`
-	BasePath          string `mapstructure:"base_path"`
-	UseStrictTypes    bool   `mapstructure:"use_strict_types"`
-	GenerateDocblocks bool   `mapstructure:"generate_docblocks"`
-}
-
-// OpenAPIConfig holds OpenAPI processing settings.
-type OpenAPIConfig struct {
-	ValidateSpec bool `mapstructure:"validate_spec"`
-	ResolveRefs  bool `mapstructure:"resolve_refs"`
-}
-
-// OutputConfig holds output-specific settings.
-type OutputConfig struct {
-	Overwrite         bool   `mapstructure:"overwrite"`
-	CreateDirectories bool   `mapstructure:"create_directories"`
-	FileExtension     string `mapstructure:"file_extension"`
+	Input        string              `mapstructure:"input"         validate:"required" flag:"input,i" usage:"Input OpenAPI specification file"`
+	Output       string              `mapstructure:"output"        validate:"required" flag:"output,o" usage:"Output directory for generated PHP files"`
+	Verbose      bool                `mapstructure:"verbose"                           flag:"verbose,v" usage:"Enable verbose output"`
+	PHP          types.PHPConfig     `mapstructure:"php"`
+	OpenAPI      types.OpenAPIConfig `mapstructure:"openapi"`
+	OutputConfig types.OutputConfig  `mapstructure:"output_config"`
 }
 
 // GenerateConfig holds generation-specific configuration.
 type GenerateConfig struct {
 	*Config
-	HTTPClient     types.HTTPClientType `mapstructure:"http_client"`
-	StrictTypes    bool                 `mapstructure:"strict_types"`
-	GenerateClient bool                 `mapstructure:"generate_client"`
-	GenerateTests  bool                 `mapstructure:"generate_tests"`
-	DryRun         bool                 `mapstructure:"dry_run"`
+	HTTPClient     types.HTTPClientType `mapstructure:"http_client"     flag:"http-client" usage:"HTTP client to use (guzzle, curl, laravel)" default:"guzzle"`
+	StrictTypes    bool                 `mapstructure:"strict_types"    flag:"strict-types" usage:"Generate strict PHP types and validation" default:"true"`
+	GenerateClient bool                 `mapstructure:"generate_client" flag:"generate-client" usage:"Generate HTTP client code" default:"true"`
+	GenerateTests  bool                 `mapstructure:"generate_tests"  flag:"generate-tests" usage:"Generate test files" default:"false"`
+	DryRun         bool                 `mapstructure:"dry_run"         flag:"dry-run" usage:"Show what would be generated without creating files" default:"false"`
 }
 
 // ValidHTTPClients contains all valid HTTP client types.
@@ -109,6 +89,45 @@ func (l *Loader) LoadGenerateConfig(configFile string) (*GenerateConfig, error) 
 	}
 
 	return &genConfig, nil
+}
+
+// LoadGenerateConfigWithAutoFlags loads configuration and automatically generates CLI flags.
+func (l *Loader) LoadGenerateConfigWithAutoFlags(cmd *cobra.Command, configFile string) (*GenerateConfig, error) {
+	// Setup viper first
+	if err := l.setupViper(configFile); err != nil {
+		return nil, fmt.Errorf("failed to setup configuration: %w", err)
+	}
+
+	// Create a config instance for auto-flag generation
+	cfg := &GenerateConfig{
+		Config: &Config{},
+	}
+
+	// Use auto-flags to generate CLI flags from struct tags
+	autoFlags := NewAutoFlags(cmd, l.v)
+	if err := autoFlags.BindFlags(cfg); err != nil {
+		return nil, fmt.Errorf("failed to auto-bind flags: %w", err)
+	}
+
+	// Load configuration after flags are bound
+	baseConfig, err := l.LoadConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set base config
+	cfg.Config = baseConfig
+
+	// Unmarshal generate-specific settings
+	if unmarshalErr := l.v.Unmarshal(cfg); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal generate config: %w", unmarshalErr)
+	}
+
+	if validationErr := l.validateGenerateConfig(cfg); validationErr != nil {
+		return nil, fmt.Errorf("generate config validation failed: %w", validationErr)
+	}
+
+	return cfg, nil
 }
 
 // BindFlags binds command-line flags to the viper instance.
@@ -192,8 +211,8 @@ func (l *Loader) validateConfig(cfg *Config) error {
 	}
 
 	// Validate file extension
-	if cfg.OutputConfig.FileExtension != "" &&
-		!strings.HasPrefix(cfg.OutputConfig.FileExtension, ".") {
+	if cfg.PHP.FileExtension != "" &&
+		!strings.HasPrefix(cfg.PHP.FileExtension, ".") {
 		errs = append(errs, "file extension must start with a dot")
 	}
 
@@ -228,31 +247,6 @@ func (l *Loader) validateGenerateConfig(cfg *GenerateConfig) error {
 	return nil
 }
 
-// ToGeneratorConfig converts the generate config to a generator config.
-func (cfg *GenerateConfig) ToGeneratorConfig() *types.GeneratorConfig {
-	return &types.GeneratorConfig{
-		InputFile:      cfg.Input,
-		OutputDir:      cfg.Output,
-		HTTPClient:     cfg.HTTPClient,
-		Namespace:      cfg.PHP.Namespace,
-		StrictTypes:    cfg.StrictTypes,
-		GenerateTests:  cfg.GenerateTests,
-		GenerateClient: cfg.GenerateClient,
-		Overwrite:      cfg.OutputConfig.Overwrite,
-		PHP: types.PHPConfig{
-			Namespace:         cfg.PHP.Namespace,
-			BasePath:          cfg.PHP.BasePath,
-			UseStrictTypes:    cfg.PHP.UseStrictTypes,
-			GenerateDocblocks: cfg.PHP.GenerateDocblocks,
-			FileExtension:     cfg.OutputConfig.FileExtension,
-		},
-		OpenAPI: types.OpenAPIConfig{
-			ValidateSpec: cfg.OpenAPI.ValidateSpec,
-			ResolveRefs:  cfg.OpenAPI.ResolveRefs,
-		},
-	}
-}
-
 // setDefaults sets default configuration values.
 func setDefaults(v *viper.Viper) {
 	// Base defaults
@@ -264,6 +258,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("php.base_path", "src")
 	v.SetDefault("php.use_strict_types", true)
 	v.SetDefault("php.generate_docblocks", true)
+	v.SetDefault("php.file_extension", ".php")
+	v.SetDefault("php.psr_compliant", true)
+	v.SetDefault("php.generate_from_array", true)
+	v.SetDefault("php.use_readonly_props", true)
+	v.SetDefault("php.use_enums", true)
 
 	// OpenAPI defaults
 	v.SetDefault("openapi.validate_spec", true)
@@ -272,7 +271,6 @@ func setDefaults(v *viper.Viper) {
 	// Output defaults
 	v.SetDefault("output_config.overwrite", false)
 	v.SetDefault("output_config.create_directories", true)
-	v.SetDefault("output_config.file_extension", ".php")
 
 	// Generate defaults
 	v.SetDefault("http_client", string(types.GuzzleClient))
@@ -322,4 +320,20 @@ func isLetter(r rune) bool {
 // GetConfigFileUsed returns the config file that was used.
 func (l *Loader) GetConfigFileUsed() string {
 	return l.v.ConfigFileUsed()
+}
+
+// ToGeneratorConfig converts the generate config to a generator config.
+func (cfg *GenerateConfig) ToGeneratorConfig() *types.GeneratorConfig {
+	return &types.GeneratorConfig{
+		InputFile:      cfg.Input,
+		OutputDir:      cfg.Output,
+		HTTPClient:     cfg.HTTPClient,
+		Namespace:      cfg.PHP.Namespace,
+		StrictTypes:    cfg.StrictTypes,
+		GenerateTests:  cfg.GenerateTests,
+		GenerateClient: cfg.GenerateClient,
+		Overwrite:      cfg.OutputConfig.Overwrite,
+		PHP:            cfg.PHP,     // Direct assignment - no conversion needed!
+		OpenAPI:        cfg.OpenAPI, // Direct assignment - no conversion needed!
+	}
 }

@@ -249,13 +249,13 @@ type LicenseInfo struct {
 
 // GeneratorConfig holds all configuration for code generation.
 type GeneratorConfig struct {
-	InputFile      string         `yaml:"inputFile"`
-	HTTPClient     HTTPClientType `yaml:"httpClient"     validate:"oneof=guzzle curl laravel"`
+	InputFile      string         `yaml:"input_file"`
+	HTTPClient     HTTPClientType `yaml:"http_client"     validate:"oneof=guzzle curl laravel"`
 	Namespace      string         `yaml:"namespace"      validate:"required"`
-	OutputDir      string         `yaml:"outputDir"      validate:"required"`
-	StrictTypes    bool           `yaml:"strictTypes"`
-	GenerateTests  bool           `yaml:"generateTests"`
-	GenerateClient bool           `yaml:"generateClient"`
+	OutputDir      string         `yaml:"output_dir"      validate:"required"`
+	StrictTypes    bool           `yaml:"strict_types"`
+	GenerateTests  bool           `yaml:"generate_tests"`
+	GenerateClient bool           `yaml:"generate_client"`
 	Overwrite      bool           `yaml:"overwrite"`
 
 	// PHP specific settings
@@ -267,19 +267,25 @@ type GeneratorConfig struct {
 
 // PHPConfig holds PHP-specific generation settings.
 type PHPConfig struct {
-	Namespace         string `yaml:"namespace"`
-	BasePath          string `yaml:"basePath"`
-	UseStrictTypes    bool   `yaml:"useStrictTypes"`
-	GenerateDocblocks bool   `yaml:"generateDocblocks"`
-	FileExtension     string `yaml:"fileExtension"`
-	PSRCompliant      bool   `yaml:"psrCompliant"`      // Follow PSR standards
-	GenerateFromArray bool   `yaml:"generateFromArray"` // Generate fromArray() methods
-	UseReadonlyProps  bool   `yaml:"useReadonlyProps"`  // Use readonly properties (PHP 8.1+)
-	UseEnums          bool   `yaml:"useEnums"`          // Use PHP 8.1+ enums
+	Namespace         string `yaml:"namespace"           mapstructure:"namespace"           validate:"required" flag:"namespace,n" usage:"PHP namespace for generated classes"`
+	BasePath          string `yaml:"base_path"           mapstructure:"base_path"                               flag:"base-path"    usage:"Base path for PHP files"`
+	UseStrictTypes    bool   `yaml:"use_strict_types"    mapstructure:"use_strict_types"                        flag:"php-strict-types" usage:"Add declare(strict_types=1) to PHP files" default:"true"`
+	GenerateDocblocks bool   `yaml:"generate_docblocks"  mapstructure:"generate_docblocks"                      flag:"generate-docs" usage:"Generate PHPDoc comments" default:"true"`
+	FileExtension     string `yaml:"file_extension"      mapstructure:"file_extension"                          flag:"file-extension" usage:"File extension for generated files" default:".php"`
+	PSRCompliant      bool   `yaml:"psr_compliant"       mapstructure:"psr_compliant"                           flag:"psr-compliant" usage:"Follow PSR standards" default:"true"`
+	GenerateFromArray bool   `yaml:"generate_from_array" mapstructure:"generate_from_array"                     flag:"generate-from-array" usage:"Generate fromArray() methods for models" default:"true"`
+	UseReadonlyProps  bool   `yaml:"use_readonly_props"  mapstructure:"use_readonly_props"                      flag:"use-readonly-props" usage:"Use readonly properties (PHP 8.1+)" default:"true"`
+	UseEnums          bool   `yaml:"use_enums"           mapstructure:"use_enums"                               flag:"use-enums" usage:"Use PHP 8.1+ enums instead of constants" default:"true"`
 }
 
 // OpenAPIConfig holds OpenAPI processing settings.
 type OpenAPIConfig struct {
-	ValidateSpec bool `yaml:"validateSpec"`
-	ResolveRefs  bool `yaml:"resolveRefs"`
+	ValidateSpec bool `yaml:"validate_spec" mapstructure:"validate_spec" flag:"validate-spec" usage:"Validate OpenAPI specification" default:"true"`
+	ResolveRefs  bool `yaml:"resolve_refs"  mapstructure:"resolve_refs"  flag:"resolve-refs" usage:"Resolve OpenAPI references" default:"true"`
+}
+
+// OutputConfig holds output-specific settings.
+type OutputConfig struct {
+	Overwrite         bool `yaml:"overwrite"          mapstructure:"overwrite"          flag:"overwrite" usage:"Overwrite existing files" default:"false"`
+	CreateDirectories bool `yaml:"create_directories" mapstructure:"create_directories" flag:"create-directories" usage:"Create output directories if they don't exist" default:"true"`
 }
