@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Unstable / Work In Progress**: This project is under active development and the code generated in not stable yet. Use at your own risk!
+
 # piak 🚀
 
 [![Test](https://github.com/floriscornel/piak/actions/workflows/test.yml/badge.svg)](https://github.com/floriscornel/piak/actions/workflows/test.yml)
