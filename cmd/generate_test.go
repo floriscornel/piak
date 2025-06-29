@@ -118,7 +118,7 @@ paths: {}
 	assert.Equal(t, tmpDir, cfg.Output)
 	assert.Equal(t, "TestNamespace", cfg.Namespace)
 	assert.True(t, cfg.GenerateClient) // default value
-	assert.False(t, cfg.GenerateTests) // default value
+	assert.True(t, cfg.GenerateTests)  // default value
 }
 
 func TestLoadConfigFromFlagsAndFile_NonExistentInputFile(t *testing.T) {
