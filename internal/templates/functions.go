@@ -251,3 +251,119 @@ func renderToArrayMethod(model *config.SchemaModel) string {
 
 	return result.String()
 }
+
+// Test data generation template helpers
+
+// generateTestData creates sample test data for a schema
+func generateTestData(schema *config.SchemaModel) string {
+	var properties []string
+
+	for _, prop := range schema.Properties {
+		value := generatePropertyTestValue(prop)
+		properties = append(properties, fmt.Sprintf("'%s' => %s", prop.Name, value))
+	}
+
+	return fmt.Sprintf("[\n        %s\n    ]", strings.Join(properties, ",\n        "))
+}
+
+// generatePropertyTestValue creates a test value for a property
+func generatePropertyTestValue(prop *config.Property) string {
+	switch prop.PHPType.Name {
+	case "string":
+		return fmt.Sprintf("'test_%s'", strings.ToLower(prop.Name))
+	case "int":
+		return "123"
+	case "float":
+		return "123.45"
+	case "bool":
+		return "true"
+	case "array":
+		return "[]"
+	default:
+		if prop.Required {
+			return fmt.Sprintf("'test_%s'", strings.ToLower(prop.Name))
+		}
+		return "null"
+	}
+}
+
+// generateAssertions creates assertions for testing property values
+func generateAssertions(className string, schema *config.SchemaModel) string {
+	var assertions []string
+	varName := strings.ToLower(className)
+
+	for _, prop := range schema.Properties {
+		expected := generatePropertyTestValue(prop)
+		assertions = append(assertions,
+			fmt.Sprintf("$this->assertEquals(%s, $%s->%s);", expected, varName, prop.Name))
+	}
+
+	return strings.Join(assertions, "\n        ")
+}
+
+// generateSerializationAssertions creates assertions for testing serialization
+func generateSerializationAssertions(schema *config.SchemaModel) string {
+	var assertions []string
+
+	for _, prop := range schema.Properties {
+		assertions = append(assertions,
+			fmt.Sprintf("$this->assertArrayHasKey('%s', $result);", prop.Name))
+	}
+
+	return strings.Join(assertions, "\n        ")
+}
+
+// generateMinimalTestData creates minimal test data with only required fields
+func generateMinimalTestData(schema *config.SchemaModel) string {
+	var properties []string
+
+	// Only include required properties for minimal test data
+	for _, prop := range schema.Properties {
+		if prop.Required {
+			value := generatePropertyTestValue(prop)
+			properties = append(properties, fmt.Sprintf("'%s' => %s", prop.Name, value))
+		}
+	}
+
+	// If no required properties, include at least one property for testing
+	if len(properties) == 0 && len(schema.Properties) > 0 {
+		prop := schema.Properties[0]
+		value := generatePropertyTestValue(prop)
+		properties = append(properties, fmt.Sprintf("'%s' => %s", prop.Name, value))
+	}
+
+	return fmt.Sprintf("[\n        %s\n    ]", strings.Join(properties, ",\n        "))
+}
+
+// Composer.json template helpers
+
+// generatePackageName generates a package name from the namespace
+func generatePackageName(namespace string) string {
+	// Convert namespace to lowercase with hyphens
+	namespaceParts := strings.Split(namespace, "\\")
+	vendor := strings.ToLower(namespaceParts[0])
+	var packageName string
+	if len(namespaceParts) > 1 {
+		packageName = fmt.Sprintf("%s/%s", vendor, strings.ToLower(strings.Join(namespaceParts[1:], "-")))
+	} else {
+		packageName = fmt.Sprintf("%s/sdk", vendor)
+	}
+	return packageName
+}
+
+// prepareJSONNamespace escapes backslashes for JSON
+func prepareJSONNamespace(namespace string) string {
+	return strings.ReplaceAll(namespace, "\\", "\\\\")
+}
+
+// cleanDescription cleans and escapes description for JSON
+func cleanDescription(description string) string {
+	cleaned := strings.ReplaceAll(description, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\"", "\\\"")
+	cleaned = strings.TrimSpace(cleaned)
+	if cleaned == "" {
+		cleaned = "Generated API client"
+	}
+	return cleaned
+}

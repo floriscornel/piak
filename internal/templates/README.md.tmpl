@@ -1,0 +1,101 @@
+# {{ .PackageName }}
+
+Generated PHP client and models from OpenAPI specification.
+
+## Installation
+
+Install dependencies:
+
+```bash
+composer install
+```
+
+## Usage
+
+### Models
+
+All model classes are generated in the `src/` directory with the namespace `{{ .Namespace }}`.
+
+Example usage:
+
+```php
+use {{ .Namespace }}\Pet;
+
+// Create from array
+$pet = Pet::fromArray([
+    'id' => 123,
+    'name' => 'Fluffy',
+    'status' => 'available'
+]);
+
+// Convert to array
+$data = $pet->toArray();
+```
+
+{{ if .GenerateClient }}
+### API Client
+
+An API client is also generated:
+
+```php
+use {{ .Namespace }}\ApiClient;
+
+$client = new ApiClient('https://api.example.com');
+$response = $client->get('/pets');
+```
+{{ end }}
+
+## Testing
+
+This package includes comprehensive tests using:
+
+- **[PHPUnit](https://phpunit.de/)** - Testing framework
+- **[OpenAPI HttpFoundation Testing](https://github.com/osteel/openapi-httpfoundation-testing)** - Validates requests/responses against OpenAPI spec
+- **[PHP OpenAPI Faker](https://github.com/canvural/php-openapi-faker)** - Generates realistic test data from OpenAPI schemas
+
+### Running Tests
+
+```bash
+# Run all tests
+vendor/bin/phpunit
+
+# Run with verbose output
+vendor/bin/phpunit --verbose
+
+# Run specific test
+vendor/bin/phpunit tests/PetTest.php
+```
+
+### Test Features
+
+The generated tests include:
+
+1. **Model Validation Tests**: Verify that generated models can be instantiated and serialized correctly
+2. **OpenAPI Compliance Tests**: Validate that models conform to the OpenAPI specification
+3. **Fake Data Generation**: Use realistic test data generated from OpenAPI schemas
+4. **Request/Response Validation**: Ensure API client requests and responses match the specification
+
+### OpenAPI Specification
+
+The OpenAPI specification file is included as `{{ .SpecFilename }}` and is used by the testing libraries to:
+
+- Generate realistic fake data for testing
+- Validate request/response structures
+- Ensure compliance with the API specification
+
+## Generated Files
+
+- `src/` - Model classes{{ if .GenerateClient }}
+- `src/ApiClient.php` - HTTP client for API calls{{ end }}
+- `tests/` - PHPUnit test cases
+- `composer.json` - Composer configuration with testing dependencies
+- `{{ .SpecFilename }}` - OpenAPI specification file
+
+## Requirements
+
+- PHP 8.1+
+- Composer
+
+## License
+
+MIT 

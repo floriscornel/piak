@@ -68,6 +68,18 @@ func GetTemplates() (*template.Template, error) {
 		// "hasSpecialCase":       hasSpecialCase,
 		"getHTTPClientImports": getHTTPClientImports,
 		"indent":               indent,
+
+		// Test data generation helpers
+		"generateTestData":                generateTestData,
+		"generatePropertyTestValue":       generatePropertyTestValue,
+		"generateAssertions":              generateAssertions,
+		"generateSerializationAssertions": generateSerializationAssertions,
+		"generateMinimalTestData":         generateMinimalTestData,
+
+		// Composer.json helpers
+		"generatePackageName":  generatePackageName,
+		"prepareJSONNamespace": prepareJSONNamespace,
+		"cleanDescription":     cleanDescription,
 	}
 
 	tmpl := template.New("").Funcs(funcMap)

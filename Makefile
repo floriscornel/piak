@@ -83,9 +83,6 @@ install-tools:
 install:
 	$(GOBUILD) $(LDFLAGS) -o $(GOPATH)/bin/$(BINARY_NAME) ./
 
-run:
-	$(GORUN) ./main.go generate
-
 ## help: Show this help message
 help: Makefile
 	@echo "Available commands:"
