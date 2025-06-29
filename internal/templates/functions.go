@@ -2,7 +2,6 @@ package templates
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -161,45 +160,6 @@ func renderFromArrayMethod(model *config.SchemaModel) string {
 	result.WriteString("}\n")
 
 	return result.String()
-}
-
-// isValidPHPIdentifier checks if a string is a valid PHP identifier.
-func isValidPHPIdentifier(name string) bool {
-	// PHP identifier regex: starts with letter or underscore, followed by letters, numbers, or underscores
-	matched, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*$`, name)
-	return matched
-}
-
-// sanitizePHPIdentifier converts a string to a valid PHP identifier.
-func sanitizePHPIdentifier(name string) string {
-	if name == "" {
-		return "property"
-	}
-
-	// Replace invalid characters with underscores
-	reg := regexp.MustCompile(`[^a-zA-Z0-9_]`)
-	sanitized := reg.ReplaceAllString(name, "_")
-
-	// Ensure it starts with a letter or underscore
-	if matched, _ := regexp.MatchString(`^[0-9]`, sanitized); matched {
-		sanitized = "_" + sanitized
-	}
-
-	// Handle empty result
-	if sanitized == "" {
-		return "property"
-	}
-
-	// Convert to camelCase for properties
-	return strcase.ToCamel(sanitized)
-}
-
-// renderArrayType handles array type rendering.
-func renderArrayType(phpType config.PHPType) string {
-	if phpType.IsArray {
-		return "array"
-	}
-	return phpType.Name
 }
 
 // getHTTPClientImports returns imports for HTTP client.

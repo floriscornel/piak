@@ -62,24 +62,3 @@ func (a *Analyzer) AnalyzeSchemas() (map[string]*SchemaInfo, error) {
 
 	return schemas, nil
 }
-
-// GetInfo returns basic information about the OpenAPI specification.
-func (a *Analyzer) GetInfo() map[string]interface{} {
-	info := make(map[string]interface{})
-
-	if a.spec.Info != nil {
-		info["title"] = a.spec.Info.Title
-		info["version"] = a.spec.Info.Version
-		info["description"] = a.spec.Info.Description
-	}
-
-	if a.spec.Components != nil && a.spec.Components.Schemas != nil {
-		info["schema_count"] = len(a.spec.Components.Schemas)
-	}
-
-	if a.spec.Paths != nil {
-		info["path_count"] = len(a.spec.Paths.Map())
-	}
-
-	return info
-}

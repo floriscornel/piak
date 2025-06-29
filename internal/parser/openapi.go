@@ -46,22 +46,3 @@ func (p *OpenAPIParser) ParseFile(filePath string) (*openapi3.T, error) {
 
 	return spec, nil
 }
-
-// ParseBytes parses an OpenAPI specification from bytes.
-func (p *OpenAPIParser) ParseBytes(data []byte) (*openapi3.T, error) {
-	loader := openapi3.NewLoader()
-	spec, err := loader.LoadFromData(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load OpenAPI specification from data: %w", err)
-	}
-
-	// Validate the specification if requested
-	if p.validateSpec {
-		ctx := context.Background()
-		if validationErr := spec.Validate(ctx); validationErr != nil {
-			return nil, fmt.Errorf("OpenAPI specification validation failed: %w", validationErr)
-		}
-	}
-
-	return spec, nil
-}

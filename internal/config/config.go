@@ -211,11 +211,6 @@ func isLetter(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }
 
-// GetConfigFileUsed returns the config file that was used.
-func (l *Loader) GetConfigFileUsed() string {
-	return l.v.ConfigFileUsed()
-}
-
 // ToGeneratorConfig converts the generate config to a generator config.
 func (cfg *GenerateConfig) ToGeneratorConfig() *GeneratorConfig {
 	return &GeneratorConfig{

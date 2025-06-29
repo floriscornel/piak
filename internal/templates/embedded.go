@@ -48,16 +48,11 @@ func GetTemplates() (*template.Template, error) {
 		"formatPHPDocType":       formatPHPDocType,
 		"formatConstructorParam": formatConstructorParam,
 		"formatDefaultValue":     formatDefaultValue,
-		"renderArrayType":        renderArrayType,
 
 		// Code generation helpers
 		"generateUseStatements": generateUseStatements,
 		"renderFromArrayMethod": renderFromArrayMethod,
 		"renderToArrayMethod":   renderToArrayMethod,
-
-		// Validation and sanitization
-		"isValidPHPIdentifier":  isValidPHPIdentifier,
-		"sanitizePHPIdentifier": sanitizePHPIdentifier,
 
 		// Utility functions
 		"getHTTPClientImports": getHTTPClientImports,
