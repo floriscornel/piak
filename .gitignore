@@ -7,3 +7,5 @@ coverage.out
 coverage.xml
 coverage.html
 .idea
+# Added by goreleaser init:
+dist/
