@@ -22,7 +22,7 @@ GOLANGCI_LINT=golangci-lint
 LDFLAGS=-ldflags "-X github.com/floriscornel/piak/cmd.version=$(VERSION) -X github.com/floriscornel/piak/cmd.commit=$(GIT_COMMIT) -X github.com/floriscornel/piak/cmd.date=$(BUILD_DATE)"
 
 # Test variables
-COVERAGE_FILE = coverage.out
+COVERAGE_FILE = coverage.txt
 COVERAGE_HTML = coverage.html
 
 .PHONY: all build clean test deps lint fmt fmt-check lint-fix check install-tools help test test-unit test-integration test-all coverage build-example run-example test-generated-php e2e-test check-php-syntax dev-setup ci
