@@ -35,7 +35,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	// Global flags available to all commands
 	rootCmd.PersistentFlags().
-		StringVar(&cfgFile, "config", "", "config file (default is $HOME/.piak.yaml)")
+		StringVar(&cfgFile, "config", "", "config file (default is ./piak.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 
 	// Add commands

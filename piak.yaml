@@ -1,8 +1,9 @@
 # Piak Configuration File
-# Default settings for OpenAPI to PHP generation
+# Project-specific settings for OpenAPI to PHP generation
+# This file should typically be committed to version control
 
 # Default input and output settings
-input: ""
+input: "examples/petstore/openapi.yaml"
 output: "./generated"
 
 # PHP Generation Settings

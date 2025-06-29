@@ -34,7 +34,7 @@ corresponding PHP classes and models in the specified output directory.
 The command supports various configuration options that can be specified via:
 1. Command-line flags (highest priority)
 2. Environment variables (PIAK_*)
-3. Configuration file (.piak.yaml)
+3. Configuration file (./piak.yaml in current directory)
 4. Default values (lowest priority)`,
 	Example: `  # Basic usage
   piak generate -i openapi.yaml -o ./generated
@@ -42,8 +42,8 @@ The command supports various configuration options that can be specified via:
   # With custom namespace and HTTP client
   piak generate -i api.json --namespace "MyApp\\Api" --http-client guzzle
 
-  # Using config file
-  piak generate -i spec.yaml --config .piak.yaml
+  # Using project config file
+  piak generate -i spec.yaml --config piak.yaml
 
   # Dry run to preview changes
   piak generate -i api.yaml --dry-run

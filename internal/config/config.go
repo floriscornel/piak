@@ -166,16 +166,12 @@ func (l *Loader) setupSpecificConfigFile(configFile string) error {
 
 // setupDefaultConfigPaths configures viper to search in default locations.
 func (l *Loader) setupDefaultConfigPaths() error {
-	// Search for config in standard locations
+	// For a code generation tool, config should be project-specific
+	// Search for config only in current directory
 	l.v.SetConfigName("piak")
 	l.v.SetConfigType("yaml")
-	l.v.AddConfigPath(".")
+	l.v.AddConfigPath(".") // Only current directory
 
-	if home, err := os.UserHomeDir(); err == nil {
-		l.v.AddConfigPath(filepath.Join(home, ".piak"))
-	}
-
-	l.v.AddConfigPath("/etc/piak")
 	return nil
 }
 
