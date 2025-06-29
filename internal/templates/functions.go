@@ -10,49 +10,35 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
-// PHP-specific template helper functions
+// PHP-specific template helper functions for MVP
 
-// formatPHPType formats a PHP type with proper nullable and union syntax.
+// formatPHPType formats a PHP type with proper nullable syntax (simplified for MVP).
 func formatPHPType(phpType config.PHPType) string {
 	var typeStr string
 
-	switch {
-	case phpType.IsUnion && len(phpType.UnionTypes) > 0:
-		typeStr = strings.Join(phpType.UnionTypes, "|")
-	case phpType.IsArray && phpType.ArrayItemType != nil:
+	// Simplified for MVP - handle basic types and arrays
+	if phpType.IsArray {
 		typeStr = "array" // We'll use PHPDoc for array types
-	default:
+	} else {
 		typeStr = phpType.Name
 	}
 
 	if phpType.IsNullable && !strings.Contains(typeStr, "null") {
-		if phpType.IsUnion {
-			typeStr += "|null"
-		} else {
-			typeStr = "?" + typeStr
-		}
+		typeStr = "?" + typeStr
 	}
 
 	return typeStr
 }
 
-// formatPHPDocType formats a PHP type for PHPDoc comments.
+// formatPHPDocType formats a PHP type for PHPDoc comments (simplified for MVP).
 func formatPHPDocType(phpType config.PHPType) string {
 	var typeStr string
 
-	switch {
-	case phpType.IsArray && phpType.ArrayItemType != nil:
-		itemType := formatPHPDocType(*phpType.ArrayItemType)
-		if phpType.IsUnion && len(phpType.UnionTypes) > 0 {
-			// For union array types: array<Type1|Type2>
-			typeStr = fmt.Sprintf("array<%s>", strings.Join(phpType.UnionTypes, "|"))
-		} else {
-			// For simple array types: Type[]
-			typeStr = itemType + "[]"
-		}
-	case phpType.IsUnion && len(phpType.UnionTypes) > 0:
-		typeStr = strings.Join(phpType.UnionTypes, "|")
-	default:
+	// Simplified for MVP - handle basic array types
+	if phpType.IsArray {
+		// For MVP, we'll just use array<string, mixed> for simplicity
+		typeStr = "array<string, mixed>"
+	} else {
 		typeStr = phpType.Name
 	}
 
@@ -125,51 +111,6 @@ func formatDefaultValue(value interface{}) string {
 	}
 }
 
-// renderUnionTypeDetection generates detection logic for union types.
-func renderUnionTypeDetection(context *config.UnionTypeContext) string {
-	if context.Discriminator != nil {
-		return renderDiscriminatorDetection(context)
-	}
-	return renderHeuristicDetection(context)
-}
-
-// renderDiscriminatorDetection generates discriminator-based detection.
-func renderDiscriminatorDetection(context *config.UnionTypeContext) string {
-	var result strings.Builder
-	result.WriteString(fmt.Sprintf("if (!isset($data['%s'])) {\n", context.Discriminator.PropertyName))
-	result.WriteString("    throw new \\InvalidArgumentException('Missing discriminator property');\n")
-	result.WriteString("}\n\n")
-
-	result.WriteString(fmt.Sprintf("switch ($data['%s']) {\n", context.Discriminator.PropertyName))
-	for value, className := range context.Discriminator.ValueMapping {
-		result.WriteString(fmt.Sprintf("    case '%s':\n", value))
-		result.WriteString(fmt.Sprintf("        return %s::fromArray($data);\n", className))
-	}
-	result.WriteString("    default:\n")
-	result.WriteString("        throw new \\InvalidArgumentException('Unknown discriminator value');\n")
-	result.WriteString("}")
-
-	return result.String()
-}
-
-// renderHeuristicDetection generates heuristic-based detection.
-func renderHeuristicDetection(context *config.UnionTypeContext) string {
-	var result strings.Builder
-	result.WriteString("// Try each type in order\n")
-
-	for i, member := range context.UnionMembers {
-		result.WriteString("try {\n")
-		result.WriteString(fmt.Sprintf("    return %s::fromArray($data);\n", member.Name))
-		result.WriteString("} catch (\\Throwable $e) {\n")
-		if i == len(context.UnionMembers)-1 {
-			result.WriteString("    throw new \\InvalidArgumentException('Data matches no union type');\n")
-		}
-		result.WriteString("}\n\n")
-	}
-
-	return result.String()
-}
-
 // renderFromArrayMethod generates a fromArray method for models.
 func renderFromArrayMethod(model *config.SchemaModel) string {
 	var result strings.Builder
@@ -182,7 +123,7 @@ func renderFromArrayMethod(model *config.SchemaModel) string {
 	result.WriteString("public static function fromArray(array $data): self\n")
 	result.WriteString("{\n")
 
-	// Generate validation and assignment logic
+	// Generate validation for required fields
 	for _, prop := range model.Properties {
 		if prop.Required {
 			result.WriteString(fmt.Sprintf("    if (!isset($data['%s'])) {\n", prop.Name))
@@ -192,67 +133,47 @@ func renderFromArrayMethod(model *config.SchemaModel) string {
 	}
 
 	result.WriteString("\n    return new self(\n")
-	for i, prop := range model.Properties {
+
+	// Order parameters to match constructor: required first, then optional
+	var requiredProps []*config.Property
+	var optionalProps []*config.Property
+
+	for _, prop := range model.Properties {
+		if prop.Required {
+			requiredProps = append(requiredProps, prop)
+		} else {
+			optionalProps = append(optionalProps, prop)
+		}
+	}
+
+	// Combine required and optional properties in correct order
+	allProps := append(requiredProps, optionalProps...)
+
+	for i, prop := range allProps {
 		propAccess := fmt.Sprintf("$data['%s'] ?? null", prop.Name)
-		if i < len(model.Properties)-1 {
+		if i < len(allProps)-1 {
 			result.WriteString(fmt.Sprintf("        %s,\n", propAccess))
 		} else {
 			result.WriteString(fmt.Sprintf("        %s\n", propAccess))
 		}
 	}
 	result.WriteString("    );\n")
-	result.WriteString("}")
-
-	return result.String()
-}
-
-// renderPropertyValidation generates validation rules for properties.
-func renderPropertyValidation(rules []*config.ValidationRule) string {
-	if len(rules) == 0 {
-		return ""
-	}
-
-	var result strings.Builder
-	for _, rule := range rules {
-		switch rule.Type {
-		case "pattern":
-			result.WriteString(fmt.Sprintf("if (!preg_match('/%s/', $value)) {\n", rule.Value))
-			result.WriteString(fmt.Sprintf("    throw new \\InvalidArgumentException('%s');\n", rule.ErrorMessage))
-			result.WriteString("}\n")
-		case "range":
-			// Handle range validation
-		}
-	}
+	result.WriteString("}\n")
 
 	return result.String()
 }
 
 // isValidPHPIdentifier checks if a string is a valid PHP identifier.
 func isValidPHPIdentifier(name string) bool {
-	if name == "" {
-		return false
-	}
-
-	// Check first character
-	first := name[0]
-	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
-		return false
-	}
-
-	// Check remaining characters
-	for _, char := range name[1:] {
-		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == '_') {
-			return false
-		}
-	}
-
-	return true
+	// PHP identifier regex: starts with letter or underscore, followed by letters, numbers, or underscores
+	matched, _ := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*$`, name)
+	return matched
 }
 
+// sanitizePHPIdentifier converts a string to a valid PHP identifier.
 func sanitizePHPIdentifier(name string) string {
 	if name == "" {
-		return "unnamed"
+		return "property"
 	}
 
 	// Replace invalid characters with underscores
@@ -260,93 +181,34 @@ func sanitizePHPIdentifier(name string) string {
 	sanitized := reg.ReplaceAllString(name, "_")
 
 	// Ensure it starts with a letter or underscore
-	if match, _ := regexp.MatchString(`^[0-9]`, sanitized); match {
+	if matched, _ := regexp.MatchString(`^[0-9]`, sanitized); matched {
 		sanitized = "_" + sanitized
 	}
 
-	// Handle reserved words
-	reserved := map[string]string{
-		"class":      "class_",
-		"function":   "function_",
-		"const":      "const_",
-		"public":     "public_",
-		"private":    "private_",
-		"protected":  "protected_",
-		"static":     "static_",
-		"final":      "final_",
-		"abstract":   "abstract_",
-		"interface":  "interface_",
-		"trait":      "trait_",
-		"namespace":  "namespace_",
-		"use":        "use_",
-		"extends":    "extends_",
-		"implements": "implements_",
+	// Handle empty result
+	if sanitized == "" {
+		return "property"
 	}
 
-	if replacement, exists := reserved[strings.ToLower(sanitized)]; exists {
-		return replacement
-	}
-
-	return sanitized
+	// Convert to camelCase for properties
+	return strcase.ToCamel(sanitized)
 }
 
-// renderArrayType generates PHP array type handling.
+// renderArrayType handles array type rendering for MVP
 func renderArrayType(phpType config.PHPType) string {
-	if !phpType.IsArray || phpType.ArrayItemType == nil {
-		return phpType.Name
+	if phpType.IsArray {
+		return "array"
 	}
-
-	itemType := formatPHPType(*phpType.ArrayItemType)
-	return fmt.Sprintf("array<%s>", itemType) // For PHPDoc
+	return phpType.Name
 }
 
-// hasSpecialCase checks if a model has a specific special case.
-func hasSpecialCase(data interface{}, specialCase config.SpecialCase) bool {
-	var model *config.SchemaModel
-
-	// Handle both direct SchemaModel and wrapped struct
-	switch v := data.(type) {
-	case *config.SchemaModel:
-		model = v
-	case struct {
-		*config.SchemaModel
-		Config *config.GeneratorConfig
-	}:
-		model = v.SchemaModel
-	default:
-		return false
-	}
-
-	for _, sc := range model.SpecialCases {
-		if sc == specialCase {
-			return true
-		}
-	}
-	return false
+// getHTTPClientImports returns imports for HTTP client (simplified for MVP)
+func getHTTPClientImports(clientType interface{}) []string {
+	// For MVP, return empty array - no special imports needed
+	return []string{}
 }
 
-// getHTTPClientImports returns import statements for the specified HTTP client.
-func getHTTPClientImports(clientType config.HTTPClientType) []string {
-	switch clientType {
-	case config.GuzzleClient:
-		return []string{
-			"GuzzleHttp\\Client",
-			"GuzzleHttp\\Exception\\GuzzleException",
-			"GuzzleHttp\\RequestOptions",
-		}
-	case config.LaravelClient:
-		return []string{
-			"Illuminate\\Http\\Client\\Factory as HttpFactory",
-			"Illuminate\\Http\\Client\\Response",
-		}
-	case config.CurlClient:
-		return []string{} // cURL doesn't need imports
-	default:
-		return []string{}
-	}
-}
-
-// indent adds indentation to multiline strings.
+// indent adds indentation to text.
 func indent(text string, spaces int) string {
 	if text == "" {
 		return text
@@ -354,15 +216,38 @@ func indent(text string, spaces int) string {
 
 	indentStr := strings.Repeat(" ", spaces)
 	lines := strings.Split(text, "\n")
+	var result strings.Builder
 
-	var result []string
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			result = append(result, "")
-		} else {
-			result = append(result, indentStr+line)
+	for i, line := range lines {
+		if line != "" {
+			result.WriteString(indentStr + line)
+		}
+		if i < len(lines)-1 {
+			result.WriteString("\n")
 		}
 	}
 
-	return strings.Join(result, "\n")
+	return result.String()
+}
+
+// renderToArrayMethod generates a toArray method for models.
+func renderToArrayMethod(model *config.SchemaModel) string {
+	var result strings.Builder
+
+	result.WriteString("\n/**\n")
+	result.WriteString(" * Convert instance to array\n")
+	result.WriteString(" * @return array<string, mixed>\n")
+	result.WriteString(" */\n")
+	result.WriteString("public function toArray(): array\n")
+	result.WriteString("{\n")
+	result.WriteString("    return [\n")
+
+	for _, prop := range model.Properties {
+		result.WriteString(fmt.Sprintf("        '%s' => $this->%s,\n", prop.Name, prop.Name))
+	}
+
+	result.WriteString("    ];\n")
+	result.WriteString("}\n")
+
+	return result.String()
 }

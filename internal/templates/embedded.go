@@ -51,19 +51,21 @@ func GetTemplates() (*template.Template, error) {
 		"renderArrayType":        renderArrayType,
 
 		// Code generation helpers
-		"generateUseStatements":        generateUseStatements,
-		"renderUnionTypeDetection":     renderUnionTypeDetection,
-		"renderDiscriminatorDetection": renderDiscriminatorDetection,
-		"renderHeuristicDetection":     renderHeuristicDetection,
-		"renderFromArrayMethod":        renderFromArrayMethod,
-		"renderPropertyValidation":     renderPropertyValidation,
+		"generateUseStatements": generateUseStatements,
+		// Complex pattern functions commented out for MVP
+		// "renderUnionTypeDetection":     renderUnionTypeDetection,
+		// "renderDiscriminatorDetection": renderDiscriminatorDetection,
+		// "renderHeuristicDetection":     renderHeuristicDetection,
+		"renderFromArrayMethod": renderFromArrayMethod,
+		"renderToArrayMethod":   renderToArrayMethod,
+		// "renderPropertyValidation":     renderPropertyValidation,
 
 		// Validation and sanitization
 		"isValidPHPIdentifier":  isValidPHPIdentifier,
 		"sanitizePHPIdentifier": sanitizePHPIdentifier,
 
 		// Utility functions
-		"hasSpecialCase":       hasSpecialCase,
+		// "hasSpecialCase":       hasSpecialCase,
 		"getHTTPClientImports": getHTTPClientImports,
 		"indent":               indent,
 	}

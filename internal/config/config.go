@@ -7,35 +7,43 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+// MVP: Comment out complex HTTP client validation for now
 // ValidHTTPClients are the valid HTTP client types.
-var ValidHTTPClients = []string{
-	string(GuzzleClient),
-	string(CurlClient),
-	string(LaravelClient),
-}
+// var ValidHTTPClients = []string{
+// 	string(GuzzleClient),
+// 	string(CurlClient),
+// 	string(LaravelClient),
+// }
 
+// MVP: Simplified config with only essential options
 // Config holds the application configuration.
 type Config struct {
-	Input        string        `mapstructure:"input"         validate:"required" flag:"input,i" usage:"Input OpenAPI specification file"`
-	Output       string        `mapstructure:"output"        validate:"required" flag:"output,o" usage:"Output directory for generated PHP files"`
-	Verbose      bool          `mapstructure:"verbose"                           flag:"verbose,v" usage:"Enable verbose output"`
-	PHP          PHPConfig     `mapstructure:"php"`
-	OpenAPI      OpenAPIConfig `mapstructure:"openapi"`
-	OutputConfig OutputConfig  `mapstructure:"output_config"`
+	Input     string `mapstructure:"input"     validate:"required" flag:"input,i" usage:"Input OpenAPI specification file"`
+	Output    string `mapstructure:"output"    validate:"required" flag:"output,o" usage:"Output directory for generated PHP files"`
+	Namespace string `mapstructure:"namespace" validate:"required" flag:"namespace,n" usage:"PHP namespace for generated classes"`
+	// MVP: Comment out verbose for now - only output on errors
+	// Verbose      bool          `mapstructure:"verbose"                           flag:"verbose,v" usage:"Enable verbose output"`
+	// MVP: Comment out complex nested configs
+	// PHP          PHPConfig     `mapstructure:"php"`
+	// OpenAPI      OpenAPIConfig `mapstructure:"openapi"`
+	// OutputConfig OutputConfig  `mapstructure:"output_config"`
 }
 
+// MVP: Simplified generate config with only essential options
 // GenerateConfig holds generation-specific configuration.
 type GenerateConfig struct {
 	*Config
-	HTTPClient     HTTPClientType `mapstructure:"http_client"     flag:"http-client" usage:"HTTP client to use (guzzle, curl, laravel)" default:"guzzle"`
-	StrictTypes    bool           `mapstructure:"strict_types"    flag:"strict-types" usage:"Generate strict PHP types and validation" default:"true"`
-	GenerateClient bool           `mapstructure:"generate_client" flag:"generate-client" usage:"Generate HTTP client code" default:"true"`
-	GenerateTests  bool           `mapstructure:"generate_tests"  flag:"generate-tests" usage:"Generate test files" default:"false"`
-	DryRun         bool           `mapstructure:"dry_run"         flag:"dry-run" usage:"Show what would be generated without creating files" default:"false"`
+	// MVP: Only keep essential generation options
+	GenerateClient bool `mapstructure:"generate_client" flag:"generate-client" usage:"Generate HTTP client code" default:"true"`
+	GenerateTests  bool `mapstructure:"generate_tests"  flag:"generate-tests" usage:"Generate test files" default:"false"`
+
+	// MVP: Comment out complex options
+	// HTTPClient     HTTPClientType `mapstructure:"http_client"     flag:"http-client" usage:"HTTP client to use (guzzle, curl, laravel)" default:"guzzle"`
+	// StrictTypes    bool           `mapstructure:"strict_types"    flag:"strict-types" usage:"Generate strict PHP types and validation" default:"true"`
+	// DryRun         bool           `mapstructure:"dry_run"         flag:"dry-run" usage:"Show what would be generated without creating files" default:"false"`
 }
 
 // Loader handles configuration loading and validation.
@@ -90,44 +98,45 @@ func (l *Loader) LoadGenerateConfig(configFile string) (*GenerateConfig, error) 
 	return &genConfig, nil
 }
 
+// MVP: Comment out complex auto-flag generation
 // LoadGenerateConfigWithAutoFlags loads configuration and automatically generates CLI flags.
-func (l *Loader) LoadGenerateConfigWithAutoFlags(cmd *cobra.Command, configFile string) (*GenerateConfig, error) {
-	// Setup viper first
-	if err := l.setupViper(configFile); err != nil {
-		return nil, fmt.Errorf("failed to setup configuration: %w", err)
-	}
+// func (l *Loader) LoadGenerateConfigWithAutoFlags(cmd *cobra.Command, configFile string) (*GenerateConfig, error) {
+// 	// Setup viper first
+// 	if err := l.setupViper(configFile); err != nil {
+// 		return nil, fmt.Errorf("failed to setup configuration: %w", err)
+// 	}
 
-	// Create a config instance for auto-flag generation
-	cfg := &GenerateConfig{
-		Config: &Config{},
-	}
+// 	// Create a config instance for auto-flag generation
+// 	cfg := &GenerateConfig{
+// 		Config: &Config{},
+// 	}
 
-	// Use auto-flags to generate CLI flags from struct tags
-	autoFlags := NewAutoFlags(cmd, l.v)
-	if err := autoFlags.BindFlags(cfg); err != nil {
-		return nil, fmt.Errorf("failed to auto-bind flags: %w", err)
-	}
+// 	// Use auto-flags to generate CLI flags from struct tags
+// 	autoFlags := NewAutoFlags(cmd, l.v)
+// 	if err := autoFlags.BindFlags(cfg); err != nil {
+// 		return nil, fmt.Errorf("failed to auto-bind flags: %w", err)
+// 	}
 
-	// Load configuration after flags are bound
-	baseConfig, err := l.LoadConfig(configFile)
-	if err != nil {
-		return nil, err
-	}
+// 	// Load configuration after flags are bound
+// 	baseConfig, err := l.LoadConfig(configFile)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// Set base config
-	cfg.Config = baseConfig
+// 	// Set base config
+// 	cfg.Config = baseConfig
 
-	// Unmarshal generate-specific settings
-	if unmarshalErr := l.v.Unmarshal(cfg); unmarshalErr != nil {
-		return nil, fmt.Errorf("failed to unmarshal generate config: %w", unmarshalErr)
-	}
+// 	// Unmarshal generate-specific settings
+// 	if unmarshalErr := l.v.Unmarshal(cfg); unmarshalErr != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal generate config: %w", unmarshalErr)
+// 	}
 
-	if validationErr := l.validateGenerateConfig(cfg); validationErr != nil {
-		return nil, fmt.Errorf("generate config validation failed: %w", validationErr)
-	}
+// 	if validationErr := l.validateGenerateConfig(cfg); validationErr != nil {
+// 		return nil, fmt.Errorf("generate config validation failed: %w", validationErr)
+// 	}
 
-	return cfg, nil
-}
+// 	return cfg, nil
+// }
 
 // BindFlags binds command-line flags to the viper instance.
 func (l *Loader) BindFlags(flags map[string]interface{}) error {
@@ -193,37 +202,9 @@ func (l *Loader) setupDefaultConfigPaths() error {
 	return nil
 }
 
+// MVP: Simplified validation - only check essential fields
 // validateConfig validates the base configuration.
 func (l *Loader) validateConfig(cfg *Config) error {
-	var errs []string
-
-	// Validate output directory
-	if cfg.Output == "" {
-		errs = append(errs, "output directory cannot be empty")
-	}
-
-	// Validate PHP namespace
-	if cfg.PHP.Namespace == "" {
-		errs = append(errs, "PHP namespace cannot be empty")
-	} else if !isValidPHPNamespace(cfg.PHP.Namespace) {
-		errs = append(errs, fmt.Sprintf("invalid PHP namespace: %s", cfg.PHP.Namespace))
-	}
-
-	// Validate file extension
-	if cfg.PHP.FileExtension != "" &&
-		!strings.HasPrefix(cfg.PHP.FileExtension, ".") {
-		errs = append(errs, "file extension must start with a dot")
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("validation errors:\n  - %s", strings.Join(errs, "\n  - "))
-	}
-
-	return nil
-}
-
-// validateGenerateConfig validates the generate command configuration.
-func (l *Loader) validateGenerateConfig(cfg *GenerateConfig) error {
 	var errs []string
 
 	// Validate input file
@@ -233,11 +214,24 @@ func (l *Loader) validateGenerateConfig(cfg *GenerateConfig) error {
 		errs = append(errs, fmt.Sprintf("input file does not exist: %s", cfg.Input))
 	}
 
-	// Validate HTTP client
-	if !isValidHTTPClient(string(cfg.HTTPClient)) {
-		errs = append(errs, fmt.Sprintf("invalid HTTP client '%s', valid options: %s",
-			cfg.HTTPClient, strings.Join(ValidHTTPClients, ", ")))
+	// Validate output directory
+	if cfg.Output == "" {
+		errs = append(errs, "output directory cannot be empty")
 	}
+
+	// Validate PHP namespace
+	if cfg.Namespace == "" {
+		errs = append(errs, "PHP namespace cannot be empty")
+	} else if !isValidPHPNamespace(cfg.Namespace) {
+		errs = append(errs, fmt.Sprintf("invalid PHP namespace: %s", cfg.Namespace))
+	}
+
+	// MVP: Comment out complex validation
+	// // Validate file extension
+	// if cfg.PHP.FileExtension != "" &&
+	// 	!strings.HasPrefix(cfg.PHP.FileExtension, ".") {
+	// 	errs = append(errs, "file extension must start with a dot")
+	// }
 
 	if len(errs) > 0 {
 		return fmt.Errorf("validation errors:\n  - %s", strings.Join(errs, "\n  - "))
@@ -246,48 +240,74 @@ func (l *Loader) validateGenerateConfig(cfg *GenerateConfig) error {
 	return nil
 }
 
+// MVP: Simplified validation
+// validateGenerateConfig validates the generate command configuration.
+func (l *Loader) validateGenerateConfig(cfg *GenerateConfig) error {
+	// MVP: For now, just rely on base config validation
+	// var errs []string
+
+	// MVP: Comment out HTTP client validation
+	// // Validate HTTP client
+	// if !isValidHTTPClient(string(cfg.HTTPClient)) {
+	// 	errs = append(errs, fmt.Sprintf("invalid HTTP client '%s', valid options: %s",
+	// 		cfg.HTTPClient, strings.Join(ValidHTTPClients, ", ")))
+	// }
+
+	// if len(errs) > 0 {
+	// 	return fmt.Errorf("validation errors:\n  - %s", strings.Join(errs, "\n  - "))
+	// }
+
+	return nil
+}
+
+// MVP: Simplified defaults
 // setDefaults sets default configuration values.
 func setDefaults(v *viper.Viper) {
-	// Base defaults
+	// MVP: Only essential defaults
 	v.SetDefault("output", "./generated")
-	v.SetDefault("verbose", false)
-
-	// PHP defaults
-	v.SetDefault("php.namespace", "Generated")
-	v.SetDefault("php.base_path", "src")
-	v.SetDefault("php.use_strict_types", true)
-	v.SetDefault("php.generate_docblocks", true)
-	v.SetDefault("php.file_extension", ".php")
-	v.SetDefault("php.psr_compliant", true)
-	v.SetDefault("php.generate_from_array", true)
-	v.SetDefault("php.use_readonly_props", true)
-	v.SetDefault("php.use_enums", true)
-
-	// OpenAPI defaults
-	v.SetDefault("openapi.validate_spec", true)
-	v.SetDefault("openapi.resolve_refs", true)
-
-	// Output defaults
-	v.SetDefault("output_config.overwrite", false)
-	v.SetDefault("output_config.create_directories", true)
-
-	// Generate defaults
-	v.SetDefault("http_client", string(GuzzleClient))
-	v.SetDefault("strict_types", true)
+	v.SetDefault("namespace", "Generated")
 	v.SetDefault("generate_client", true)
 	v.SetDefault("generate_tests", false)
-	v.SetDefault("dry_run", false)
+
+	// MVP: Comment out complex defaults
+	// // Base defaults
+	// v.SetDefault("verbose", false)
+
+	// // PHP defaults
+	// v.SetDefault("php.namespace", "Generated")
+	// v.SetDefault("php.base_path", "src")
+	// v.SetDefault("php.use_strict_types", true)
+	// v.SetDefault("php.generate_docblocks", true)
+	// v.SetDefault("php.file_extension", ".php")
+	// v.SetDefault("php.psr_compliant", true)
+	// v.SetDefault("php.generate_from_array", true)
+	// v.SetDefault("php.use_readonly_props", true)
+	// v.SetDefault("php.use_enums", true)
+
+	// // OpenAPI defaults
+	// v.SetDefault("openapi.validate_spec", true)
+	// v.SetDefault("openapi.resolve_refs", true)
+
+	// // Output defaults
+	// v.SetDefault("output_config.overwrite", false)
+	// v.SetDefault("output_config.create_directories", true)
+
+	// // Generate defaults
+	// v.SetDefault("http_client", string(GuzzleClient))
+	// v.SetDefault("strict_types", true)
+	// v.SetDefault("dry_run", false)
 }
 
+// MVP: Comment out HTTP client validation
 // isValidHTTPClient checks if the HTTP client type is valid.
-func isValidHTTPClient(client string) bool {
-	for _, valid := range ValidHTTPClients {
-		if client == valid {
-			return true
-		}
-	}
-	return false
-}
+// func isValidHTTPClient(client string) bool {
+// 	for _, valid := range ValidHTTPClients {
+// 		if client == valid {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 // isValidPHPNamespace checks if the PHP namespace is valid.
 func isValidPHPNamespace(namespace string) bool {
@@ -321,18 +341,20 @@ func (l *Loader) GetConfigFileUsed() string {
 	return l.v.ConfigFileUsed()
 }
 
+// MVP: Simplified generator config conversion
 // ToGeneratorConfig converts the generate config to a generator config.
 func (cfg *GenerateConfig) ToGeneratorConfig() *GeneratorConfig {
 	return &GeneratorConfig{
 		InputFile:      cfg.Input,
 		OutputDir:      cfg.Output,
-		HTTPClient:     cfg.HTTPClient,
-		Namespace:      cfg.PHP.Namespace,
-		StrictTypes:    cfg.StrictTypes,
+		Namespace:      cfg.Namespace,
 		GenerateTests:  cfg.GenerateTests,
 		GenerateClient: cfg.GenerateClient,
-		Overwrite:      cfg.OutputConfig.Overwrite,
-		PHP:            cfg.PHP,     // Direct assignment - no conversion needed!
-		OpenAPI:        cfg.OpenAPI, // Direct assignment - no conversion needed!
+		// MVP: Use hardcoded sensible defaults instead of complex configuration
+		// HTTPClient:     cfg.HTTPClient,
+		// StrictTypes:    cfg.StrictTypes,
+		// Overwrite:      cfg.OutputConfig.Overwrite,
+		// PHP:            cfg.PHP,     // Direct assignment - no conversion needed!
+		// OpenAPI:        cfg.OpenAPI, // Direct assignment - no conversion needed!
 	}
 }

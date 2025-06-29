@@ -28,7 +28,7 @@ func NewGenerator(cfg *config.GeneratorConfig) (*Generator, error) {
 
 	return &Generator{
 		config: cfg,
-		parser: parser.New(cfg.OpenAPI.ValidateSpec, cfg.OpenAPI.ResolveRefs),
+		parser: parser.New(true, true), // validateSpec=true, resolveRefs=true
 		phpGen: phpGen,
 	}, nil
 }
@@ -36,30 +36,16 @@ func NewGenerator(cfg *config.GeneratorConfig) (*Generator, error) {
 // Generate performs the complete generation process.
 func (g *Generator) Generate() error {
 	// Parse the OpenAPI specification
-	if g.config.PHP.GenerateDocblocks {
-		fmt.Printf("🔍 Parsing OpenAPI specification: %s\n", g.config.InputFile)
-	}
-
 	spec, err := g.parser.ParseFile(g.config.InputFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse OpenAPI specification: %w", err)
 	}
 
 	// Analyze the specification
-	if g.config.PHP.GenerateDocblocks {
-		fmt.Printf("🔬 Analyzing OpenAPI specification...\n")
-	}
-
 	analyzer := analyzer.New(spec)
 	schemas, err := analyzer.AnalyzeSchemas()
 	if err != nil {
 		return fmt.Errorf("failed to analyze OpenAPI specification: %w", err)
-	}
-
-	if g.config.PHP.GenerateDocblocks {
-		info := analyzer.GetInfo()
-		fmt.Printf("📊 Found %d schemas in API: %s v%s\n",
-			len(schemas), info["title"], info["version"])
 	}
 
 	// Convert to new types format
@@ -89,16 +75,8 @@ func (g *Generator) Generate() error {
 	}
 
 	// Generate PHP code
-	if g.config.PHP.GenerateDocblocks {
-		fmt.Printf("🏗️  Generating PHP code to: %s\n", g.config.OutputDir)
-	}
-
 	if genErr := g.phpGen.GenerateFromModel(internalModel); genErr != nil {
 		return fmt.Errorf("failed to generate PHP code: %w", genErr)
-	}
-
-	if g.config.PHP.GenerateDocblocks {
-		fmt.Printf("✅ Successfully generated %d PHP classes\n", len(schemas))
 	}
 
 	return nil
@@ -142,11 +120,7 @@ func convertProperties(oldProps map[string]*openapi3.SchemaRef, required []strin
 			if phpType.Name == "array" && propRef.Value.Items != nil {
 				itemType := resolveArrayItemType(propRef.Value.Items)
 				phpType.IsArray = true
-				phpType.ArrayItemType = &config.PHPType{
-					Name:       itemType,
-					IsNullable: false,
-					DocComment: itemType,
-				}
+				phpType.DocComment = fmt.Sprintf("array<%s>", itemType)
 			}
 
 			prop := &config.Property{
@@ -180,31 +154,29 @@ func mapOpenAPITypeToPHP(schema *openapi3.Schema) string {
 	case "boolean":
 		return "bool"
 	case arrayType:
-		return arrayType
+		return "array"
 	case "object":
-		return arrayType
+		return "array" // For MVP, treat objects as arrays
 	default:
 		return "mixed"
 	}
 }
 
-// Helper function to resolve array item types, including schema references.
+// Helper function to resolve array item types.
 func resolveArrayItemType(itemsRef *openapi3.SchemaRef) string {
 	if itemsRef == nil {
 		return "mixed"
 	}
 
-	// Check if it's a reference to a schema
 	if itemsRef.Ref != "" {
-		// Extract the schema name from the reference
-		// Example: "#/components/schemas/Tag" -> "Tag"
+		// Extract schema name from reference
 		parts := strings.Split(itemsRef.Ref, "/")
 		if len(parts) > 0 {
 			return parts[len(parts)-1]
 		}
+		return "mixed"
 	}
 
-	// If not a reference, use the regular type mapping
 	if itemsRef.Value != nil {
 		return mapOpenAPITypeToPHP(itemsRef.Value)
 	}

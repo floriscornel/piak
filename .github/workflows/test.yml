@@ -1,0 +1,76 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+
+    - name: Install dependencies
+      run: make deps
+
+    - name: Lint code
+      run: make lint
+
+    - name: Run unit tests
+      run: make test-unit
+
+    - name: Run integration tests
+      run: make test-integration
+
+    - name: Generate coverage
+      run: make coverage-ci
+
+    - name: Run end-to-end tests
+      run: make e2e-test
+
+    - name: Check PHP syntax
+      run: make check-php-syntax
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: |
+          coverage.out
+          coverage.html
+          examples/*/output/
+        retention-days: 30
+
+    - name: Archive generated PHP code
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: generated-php-examples
+        path: |
+          examples/*/output/src/
+          examples/*/output/tests/
+          examples/*/output/composer.json
+          examples/*/output/README.md
+        retention-days: 7 

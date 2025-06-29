@@ -1,12 +1,10 @@
 {{- define "classHeader" -}}
 <?php
-{{- if .Config.PHP.UseStrictTypes }}
 
 declare(strict_types=1);
-{{- end }}
-{{- if .Config.PHP.Namespace }}
+{{- if .Config.Namespace }}
 
-namespace {{ .Config.PHP.Namespace }};
+namespace {{ .Config.Namespace }};
 {{- end }}
 
 {{- template "classDocblock" . }}

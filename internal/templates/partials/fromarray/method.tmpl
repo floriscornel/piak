@@ -1,9 +1,3 @@
 {{- define "fromArrayMethod" -}}
-
-{{- template "fromArraySignature" . }}
-    {
-{{- template "fromArrayValidation" . }}
-
-{{- template "fromArrayInstantiation" . }}
-    }
+{{ renderFromArrayMethod .SchemaModel }}
 {{- end -}} 

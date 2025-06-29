@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: Dynamic Properties Example API
+  version: 1.0.0
+  description: Example API demonstrating dynamic properties and additionalProperties
+
+paths:
+  /flexible-models:
+    post:
+      summary: Create flexible model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlexibleModel'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlexibleModel'
+
+components:
+  schemas:
+    FlexibleModel:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+      additionalProperties:
+        type: string
+      
+    DynamicConfig:
+      type: object
+      properties:
+        version:
+          type: string
+      additionalProperties: true
+      
+    StrictlyTypedAdditional:
+      type: object
+      properties:
+        baseProperty:
+          type: string
+      additionalProperties:
+        type: object
+        properties:
+          value:
+            type: string
+          type:
+            type: string
+            enum: [string, number, boolean] 

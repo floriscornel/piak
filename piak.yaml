@@ -1,32 +1,35 @@
-# Piak Configuration File
-# Project-specific settings for OpenAPI to PHP generation
-# This file should typically be committed to version control
+# Piak Configuration File - MVP Version
+# Simplified configuration for OpenAPI to PHP generation
 
-# Default input and output settings
+# Essential MVP settings
 input: "examples/petstore/openapi.yaml"
 output: "examples/petstore/output"
+namespace: "Generated"
+generate_client: true
+generate_tests: true
 
-# PHP Generation Settings
-php:
-  namespace: "Generated"
-  base_path: "src"
-  use_strict_types: true
-  generate_docblocks: true
-  file_extension: ".php"
-  psr_compliant: true
-  generate_from_array: true
-  use_readonly_props: true
-  use_enums: true
+# MVP: Comment out complex configuration options
+# # PHP Generation Settings
+# php:
+#   namespace: "Generated"
+#   base_path: "src"
+#   use_strict_types: true
+#   generate_docblocks: true
+#   file_extension: ".php"
+#   psr_compliant: true
+#   generate_from_array: true
+#   use_readonly_props: true
+#   use_enums: true
 
-# OpenAPI Processing Settings
-openapi:
-  validate_spec: true
-  resolve_refs: true
+# # OpenAPI Processing Settings
+# openapi:
+#   validate_spec: true
+#   resolve_refs: true
 
-# Output Settings
-output_config:
-  overwrite: true
-  create_directories: true
+# # Output Settings
+# output_config:
+#   overwrite: true
+#   create_directories: true
 
-# Logging
-verbose: false 
+# # Logging
+# verbose: false 

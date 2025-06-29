@@ -1,5 +1,9 @@
 package config
 
+// MVP: Comment out complex auto-flag generation for now
+// We'll use simple manual flags for the MVP and can restore this later
+
+/*
 import (
 	"fmt"
 	"reflect"
@@ -204,35 +208,17 @@ func (af *AutoFlags) createFlag(flagName, shortFlag, usage string, fieldType ref
 		} else {
 			flags.Bool(flagName, false, usage)
 		}
-	case reflect.Int:
+	case reflect.Int, reflect.Int32, reflect.Int64:
 		if shortFlag != "" {
 			flags.IntP(flagName, shortFlag, 0, usage)
 		} else {
 			flags.Int(flagName, 0, usage)
 		}
-	case reflect.Int32:
+	case reflect.Float32, reflect.Float64:
 		if shortFlag != "" {
-			flags.Int32P(flagName, shortFlag, 0, usage)
+			flags.Float64P(flagName, shortFlag, 0.0, usage)
 		} else {
-			flags.Int32(flagName, 0, usage)
-		}
-	case reflect.Int64:
-		if shortFlag != "" {
-			flags.Int64P(flagName, shortFlag, 0, usage)
-		} else {
-			flags.Int64(flagName, 0, usage)
-		}
-	case reflect.Float32:
-		if shortFlag != "" {
-			flags.Float32P(flagName, shortFlag, 0, usage)
-		} else {
-			flags.Float32(flagName, 0, usage)
-		}
-	case reflect.Float64:
-		if shortFlag != "" {
-			flags.Float64P(flagName, shortFlag, 0, usage)
-		} else {
-			flags.Float64(flagName, 0, usage)
+			flags.Float64(flagName, 0.0, usage)
 		}
 	default:
 		return fmt.Errorf("unsupported flag type: %s", fieldType.Kind())
@@ -241,3 +227,4 @@ func (af *AutoFlags) createFlag(flagName, shortFlag, usage string, fieldType ref
 	// Bind flag to viper
 	return af.viper.BindPFlag(configKey, flags.Lookup(flagName))
 }
+*/

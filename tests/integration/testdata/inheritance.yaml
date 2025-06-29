@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  title: Inheritance Example API
+  version: 1.0.0
+  description: Example API demonstrating inheritance with discriminators
+
+paths:
+  /animals:
+    get:
+      summary: Get animals
+      responses:
+        '200':
+          description: List of animals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Animal'
+
+components:
+  schemas:
+    Animal:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+      discriminator:
+        propertyName: type
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+
+    Dog:
+      allOf:
+        - $ref: '#/components/schemas/Animal'
+        - type: object
+          properties:
+            breed:
+              type: string
+            barkVolume:
+              type: integer
+              minimum: 1
+              maximum: 10
+
+    Cat:
+      allOf:
+        - $ref: '#/components/schemas/Animal'
+        - type: object
+          properties:
+            indoor:
+              type: boolean
+            lives:
+              type: integer
+              default: 9 

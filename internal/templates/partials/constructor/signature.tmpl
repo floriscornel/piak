@@ -1,13 +1,31 @@
 {{- define "constructorSignature" -}}
 
     public function __construct(
-{{- range $index, $prop := .Properties }}
-{{- if $.Config.PHP.GenerateDocblocks }}
-{{- if $prop.PHPType.IsArray }}
-        /** @var {{ formatPHPDocType $prop.PHPType }} */
+{{- /* Count required and optional properties for comma logic */ -}}
+{{- $requiredCount := 0 }}
+{{- $optionalCount := 0 }}
+{{- range $prop := .Properties }}
+{{- if $prop.Required }}
+{{- $requiredCount = add $requiredCount 1 }}
+{{- else }}
+{{- $optionalCount = add $optionalCount 1 }}
 {{- end }}
 {{- end }}
-        public {{ formatPHPType $prop.PHPType }} ${{ $prop.Name }}{{ if not $prop.Required }}{{ if $prop.DefaultValue }} = {{ formatDefaultValue $prop.DefaultValue }}{{ else if $prop.PHPType.IsArray }} = []{{ else }} = null{{ end }}{{ end }}{{ if ne $index (sub (len $.Properties) 1) }},{{ end }}
+{{- /* Output required parameters first */ -}}
+{{- $requiredIndex := 0 }}
+{{- range $prop := .Properties }}
+{{- if $prop.Required }}
+        public {{ formatPHPType $prop.PHPType }} ${{ $prop.Name }}{{ if or (ne $requiredIndex (sub $requiredCount 1)) (gt $optionalCount 0) }},{{ end }}
+{{- $requiredIndex = add $requiredIndex 1 }}
+{{- end }}
+{{- end }}
+{{- /* Output optional parameters */ -}}
+{{- $optionalIndex := 0 }}
+{{- range $prop := .Properties }}
+{{- if not $prop.Required }}
+        public {{ formatPHPType $prop.PHPType }} ${{ $prop.Name }}{{ if $prop.PHPType.IsArray }} = []{{ else }} = null{{ end }}{{ if ne $optionalIndex (sub $optionalCount 1) }},{{ end }}
+{{- $optionalIndex = add $optionalIndex 1 }}
+{{- end }}
 {{- end }}
     ) {}
 {{- end -}} 
